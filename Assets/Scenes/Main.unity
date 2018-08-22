@@ -179,7 +179,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52ea678dff3796c4c92ab162cb5764bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  RawImage: {fileID: 0}
+  Rom: {fileID: 4900000, guid: 3d441c8af360745ca85736695518ec09, type: 3}
   Display: {fileID: 635089074}
   Speaker: {fileID: 635089078}
 --- !u!33 &635089076

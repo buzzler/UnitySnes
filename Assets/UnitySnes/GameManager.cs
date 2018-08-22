@@ -5,25 +5,17 @@ namespace UnitySnes
 {
     public class GameManager : MonoBehaviour
     {
-        public static string Rompath;
-        
+        public TextAsset Rom;
         public Renderer Display;
         public Speaker Speaker;
         private LibretroWrapper.Wrapper _wrapper;
 
         private void Start()
         {
-            if (!string.IsNullOrEmpty(Rompath))
-            {
-                Application.targetFrameRate = 60;
-                _wrapper = new LibretroWrapper.Wrapper();
-                _wrapper.Init(Display, Speaker);
-                _wrapper.LoadGame(Rompath);
-            }
-            else
-            {
-                SceneManager.LoadScene("loader");
-            }
+            Application.targetFrameRate = 60;
+            _wrapper = new LibretroWrapper.Wrapper();
+            _wrapper.Init(Display, Speaker);                
+            _wrapper.LoadGame(Rom.bytes);
         }
 
         private void Update()

@@ -61,6 +61,17 @@ namespace UnitySnes
 
             [MarshalAs(UnmanagedType.U1)]
             public bool block_extract;
+
+            public override string ToString()
+            {
+                var coreName = Marshal.PtrToStringAnsi((IntPtr) library_name);
+                var coreVersion = Marshal.PtrToStringAnsi((IntPtr) library_version);
+                var validExtensions = Marshal.PtrToStringAnsi((IntPtr) valid_extensions);
+
+                return string.Format(
+                    "Core Name: {0}\nCore Version: {1}\nValid Extensions: {2}\nNeed FullPath: {3}\nBlock Extract: {4}",
+                    coreName, coreVersion, validExtensions, need_fullpath, block_extract);
+            }
         }
 
         private class Environment
@@ -83,11 +94,9 @@ namespace UnitySnes
         {
             public const int AudioBatchSize = 4096;
             
-            private static readonly float[] _audioBatch = new float[AudioBatchSize];    // static for IL2CPP
+            private static readonly float[] AudioBatch = new float[AudioBatchSize];    // static for IL2CPP
             private static int _batchPosition;            // static for IL2CPP
             private static PixelFormat _pixelFormat;    // static for IL2CPP
-            private bool _requiresFullPath;
-            private SystemAvInfo _av;
 
             private Renderer _gameRenderer;
             private static Speaker _gameSpeaker;        // static for IL2CPP
@@ -95,6 +104,7 @@ namespace UnitySnes
 
             private static byte[] _src;                // static for IL2CPP
             private static byte[] _dst;                // static for IL2CPP
+            private static int _linebytes;            // static for IL2CPP
 
             private Bridges.RetroEnvironmentDelegate _environment;
             private Bridges.RetroVideoRefreshDelegate _videoRefresh;
@@ -109,23 +119,10 @@ namespace UnitySnes
                 _gameSpeaker = speaker;
                 _gameTexture = null;
 
-                var apiVersion = Bridges.retro_api_version();
+                Bridges.retro_api_version();
                 var info = new SystemInfo();
                 Bridges.retro_get_system_info(ref info);
-
-                var coreName = Marshal.PtrToStringAnsi((IntPtr) info.library_name);
-                var coreVersion = Marshal.PtrToStringAnsi((IntPtr) info.library_version);
-                var validExtensions = Marshal.PtrToStringAnsi((IntPtr) info.valid_extensions);
-                _requiresFullPath = info.need_fullpath;
-                var blockExtract = info.block_extract;
-
-                Debug.Log("Core information:");
-                Debug.Log("API Version: " + apiVersion);
-                Debug.Log("Core Name: " + coreName);
-                Debug.Log("Core Version: " + coreVersion);
-                Debug.Log("Valid Extensions: " + validExtensions);
-                Debug.Log("Block Extraction: " + blockExtract);
-                Debug.Log("Requires Full Path: " + _requiresFullPath);
+                Console.WriteLine(info);
 
                 _environment = RetroEnvironment;
                 _videoRefresh = RetroVideoRefresh;
@@ -133,9 +130,6 @@ namespace UnitySnes
                 _audioSampleBatch = RetroAudioSampleBatch;
                 _inputPoll = RetroInputPoll;
                 _inputState = RetroInputState;
-
-                Debug.Log("Setting up environment:");
-
                 Bridges.retro_set_environment(_environment);
                 Bridges.retro_set_video_refresh(_videoRefresh);
                 Bridges.retro_set_audio_sample(_audioSample);
@@ -158,58 +152,40 @@ namespace UnitySnes
             [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]
             private static unsafe void RetroVideoRefresh(void* data, uint width, uint height, uint pitch)
             {
-                var _w = Convert.ToInt32(width);
-                var _h = Convert.ToInt32(height);
-                var _p = Convert.ToInt32(pitch);
-
                 var pixels = (IntPtr) data;
-                uint i;
-                uint j;
-
                 switch (_pixelFormat)
                 {
                     case PixelFormat.RetroPixelFormat0Rgb1555:
-                        for (i = 0; i < height; i++)
+                        for (var i = 0; i < height; i++)
                         {
-                            for (j = 0; j < width; j++)
+                            for (var j = 0; j < width; j++)
                             {
                                 var packed = Marshal.ReadInt16(pixels);
                                 var color = new Color(((packed >> 10) & 0x001F) / 31.0f,
                                     ((packed >> 5) & 0x001F) / 31.0f, (packed & 0x001F) / 31.0f, 1.0f);
-                                _gameTexture.SetPixel((int) i, (int) j, color);
+                                _gameTexture.SetPixel(i, j, color);
                             }
                             _gameTexture.Apply();
                         }
                         break;
                     case PixelFormat.RetroPixelFormatXrgb8888:
-                        for (i = 0; i < height; i++)
+                        for (var i = 0; i < height; i++)
                         {
-                            for (j = 0; j < width; j++)
+                            for (var j = 0; j < width; j++)
                             {
                                 var packed = Marshal.ReadInt32(pixels);
                                 var color = new Color(((packed >> 16) & 0x00FF) / 255.0f,
                                     ((packed >> 8) & 0x00FF) / 255.0f, (packed & 0x00FF) / 255.0f, 1.0f);
-                                _gameTexture.SetPixel((int) i, (int) j, color);
+                                _gameTexture.SetPixel(i, j, color);
                             }
                         }
                         _gameTexture.Apply();
                         break;
                     case PixelFormat.RetroPixelFormatRgb565:
-                        var imagedata565 = new IntPtr(data);
-                        var srcsize565 = 2 * (_p * _h);
-                        var dstsize565 = 2 * (_w * _h);
-                        if (_src == null || _src.Length != srcsize565)
-                            _src = new byte[srcsize565];
-                        if (_dst == null || _dst.Length != dstsize565)
-                            _dst = new byte[dstsize565];
-                        Marshal.Copy(imagedata565, _src, 0, srcsize565);
-                        var m565 = 0;
-                        for (var y = 0; y < _h; y++)
+                        for (var k = 0 ; k < height ; k++)
                         {
-                            var from = y * _p;
-                            var to = _w * 2 + from;
-                            for (var k = from; k < to; k++)
-                                _dst[m565++] = _src[k];
+                            Marshal.Copy(pixels, _dst, k * _linebytes, _linebytes);
+                            pixels = new IntPtr(pixels.ToInt64() + pitch);
                         }
                         _gameTexture.LoadRawTextureData(_dst);
                         _gameTexture.Apply();
@@ -237,13 +213,13 @@ namespace UnitySnes
                     var value = chunk / 32768f; // Divide by Int16 max to get correct float value.
                     value = Mathf.Clamp(value, -1.0f, 1.0f); // Unity's audio only takes values between -1 and 1.
 
-                    _audioBatch[_batchPosition] = value;
+                    AudioBatch[_batchPosition] = value;
                     _batchPosition++;
 
                     // When the batch is filled send it to the speakers.
                     if (_batchPosition >= AudioBatchSize - 1)
                     {
-                        _gameSpeaker.UpdateAudio(_audioBatch);
+                        _gameSpeaker.UpdateAudio(AudioBatch);
                         _batchPosition = 0;
                     }
                 }
@@ -403,51 +379,40 @@ namespace UnitySnes
                 return (char*) p.ToPointer();
             }
 
-            private unsafe GameInfo LoadGameInfo(Stream stream, string path = null)
+            private unsafe GameInfo LoadGameInfo(byte[] bytes, string path = null)
             {
                 var gameInfo = new GameInfo();
 
-                var data = new byte[stream.Length];
-                stream.Read(data, 0, (int) stream.Length);
-                var arrayPointer = Marshal.AllocHGlobal(data.Length * Marshal.SizeOf(typeof(byte)));
-                Marshal.Copy(data, 0, arrayPointer, data.Length);
+                var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
+                Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
 
                 gameInfo.path = StringToChar(string.IsNullOrEmpty(path) ? Path.GetTempFileName() : path);
-                gameInfo.size = (uint) data.Length;
+                gameInfo.size = (uint) bytes.Length;
                 gameInfo.data = arrayPointer.ToPointer();
 
                 return gameInfo;
             }
 
-            public bool LoadGame(string filepath)
+            public bool LoadGame(byte[] bytes)
             {
-                using (var stream = new FileStream(filepath, FileMode.Open))
-                    return LoadGame(stream);
+                return LoadGame(LoadGameInfo(bytes));
             }
 
-            public bool LoadGame(Stream stream)
+            public bool LoadGame(GameInfo gameInfo)
             {
-                var gameInfo = LoadGameInfo(stream);
                 var ret = Bridges.retro_load_game(ref gameInfo);
+                Console.WriteLine("Game information: {0}", gameInfo);
 
-                Console.WriteLine("\nSystem information:");
-
-                _av = new SystemAvInfo();
-                Bridges.retro_get_system_av_info(ref _av);
-                var w = Convert.ToInt32(_av.geometry.base_width);
-                var h = Convert.ToInt32(_av.geometry.base_height);
+                var av = new SystemAvInfo();
+                Bridges.retro_get_system_av_info(ref av);
+                Console.WriteLine("SYstem AV information: {0}", av);
+                
+                var w = Convert.ToInt32(av.geometry.base_width);
+                var h = Convert.ToInt32(av.geometry.base_height);
                 _gameTexture = new Texture2D(w, h, TextureFormat.RGB565, false) {filterMode = FilterMode.Point};
                 _gameRenderer.material.mainTexture = _gameTexture;
-
-                Debug.Log("Geometry:");
-                Debug.Log("Base width: " + w);
-                Debug.Log("Base height: " + h);
-                Debug.Log("Max width: " + _av.geometry.max_width);
-                Debug.Log("Max height: " + _av.geometry.max_height);
-                Debug.Log("Aspect ratio: " + _av.geometry.aspect_ratio);
-                Debug.Log("Geometry:");
-                Debug.Log("Target fps: " + _av.timing.fps);
-                Debug.Log("Sample rate " + _av.timing.sample_rate);
+                _linebytes = 2 * w;
+                _dst = new byte[_linebytes * h];
 
                 return ret;
             }
@@ -549,64 +514,64 @@ namespace UnitySnes
             [DllImport(LibretroCore, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_unload_game")]
             public static extern void retro_unload_game();
 #elif UNITY_IOS
-			[DllImport ("__Internal")]
-			public	static extern int retro_api_version();
-
-			[DllImport ("__Internal")]
-			public static extern void retro_init();
-
-			[DllImport ("__Internal")]
-			public static extern void retro_get_system_info(ref SystemInfo info);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_get_system_av_info(ref SystemAvInfo info);
-
-			[DllImport ("__Internal")]
-			public static extern bool retro_load_game(ref GameInfo game);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_set_video_refresh(RetroVideoRefreshDelegate r);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_set_audio_sample(RetroAudioSampleDelegate r);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_set_audio_sample_batch(RetroAudioSampleBatchDelegate r);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_set_input_poll(RetroInputPollDelegate r);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_set_input_state(RetroInputStateDelegate r);
-
-			[DllImport ("__Internal")]
-			public static extern bool retro_set_environment(RetroEnvironmentDelegate r);
-
-			[DllImport ("__Internal")]
-			public static extern void retro_run();
-
-			[DllImport ("__Internal")]
-			public static extern void retro_deinit();
-    
             [DllImport ("__Internal")]
-			public static extern void retro_unload_game();
+            public	static extern int retro_api_version();
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_init();
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_get_system_info(ref SystemInfo info);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_get_system_av_info(ref SystemAvInfo info);
+            
+            [DllImport ("__Internal")]
+            public static extern bool retro_load_game(ref GameInfo game);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_set_video_refresh(RetroVideoRefreshDelegate r);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_set_audio_sample(RetroAudioSampleDelegate r);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_set_audio_sample_batch(RetroAudioSampleBatchDelegate r);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_set_input_poll(RetroInputPollDelegate r);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_set_input_state(RetroInputStateDelegate r);
+            
+            [DllImport ("__Internal")]
+            public static extern bool retro_set_environment(RetroEnvironmentDelegate r);
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_run();
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_deinit();
+            
+            [DllImport ("__Internal")]
+            public static extern void retro_unload_game();
 #endif
 
             //typedef void (*retro_video_refresh_t)(const void *data, unsigned width, unsigned height, size_t pitch);
             public delegate void RetroVideoRefreshDelegate(void* data, uint width, uint height, uint pitch);
-
+            
             //typedef void (*retro_audio_sample_t)(int16_t left, int16_t right);
             public delegate void RetroAudioSampleDelegate(short left, short right);
-
+            
             //typedef size_t (*retro_audio_sample_batch_t)(const int16_t *data, size_t frames);
             public delegate void RetroAudioSampleBatchDelegate(short* data, uint frames);
-
+            
             //typedef void (*retro_input_poll_t)(void);
             public delegate void RetroInputPollDelegate();
-
+            
             //typedef int16_t (*retro_input_state_t)(unsigned port, unsigned device, unsigned index, unsigned id);
             public delegate short RetroInputStateDelegate(uint port, uint device, uint index, uint id);
-
+            
             //typedef bool (*retro_environment_t)(unsigned cmd, void *data);
             public delegate bool RetroEnvironmentDelegate(uint cmd, void* data);
         }
