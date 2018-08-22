@@ -231,7 +231,7 @@ namespace UnitySnes
                 // Unused
             }
 #if NO_INPUT
-            [MonoPInvokeCallback(typeof(Libretro.RetroInputStateDelegate))]
+            [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
             private static short RetroInputState(uint port, uint device, uint index, uint id)
             {
                 return 0;
@@ -304,7 +304,7 @@ namespace UnitySnes
             public static bool PressingL1;
             public static bool PressingR1;
 
-            [MonoPInvokeCallback(typeof(Libretro.RetroInputStateDelegate))]
+            [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
             private static short RetroInputState(uint port, uint device, uint index, uint id)
             {
                 switch (id)
