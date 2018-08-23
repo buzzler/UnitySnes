@@ -9,19 +9,22 @@ namespace UnitySnes
     public class System
     {
         public const int AudioBatchSize = 4096;
-
+        public SystemInfo SystemInfo;
+        public GameInfo GameInfo;
+        public SystemAvInfo SystemAvInfo;
+        
         private static readonly float[] AudioBatch = new float[AudioBatchSize]; // static for IL2CPP
         private static int _batchPosition; // static for IL2CPP
         private static PixelFormat _pixelFormat; // static for IL2CPP
-
+        
         private Renderer _gameRenderer;
         private static Speaker _gameSpeaker; // static for IL2CPP
         private static Texture2D _gameTexture; // static for IL2CPP
-
+        
         private static byte[] _src; // static for IL2CPP
         private static byte[] _dst; // static for IL2CPP
         private static int _linebytes; // static for IL2CPP
-
+        
         private Bridges.RetroEnvironmentDelegate _environment;
         private Bridges.RetroVideoRefreshDelegate _videoRefresh;
         private Bridges.RetroAudioSampleDelegate _audioSample;
@@ -35,17 +38,15 @@ namespace UnitySnes
             _gameSpeaker = speaker;
             _gameTexture = null;
 
-            Bridges.retro_api_version();
-            var info = new SystemInfo();
-            Bridges.retro_get_system_info(ref info);
-            Console.WriteLine(info);
-
             _environment = RetroEnvironment;
             _videoRefresh = RetroVideoRefresh;
             _audioSample = RetroAudioSample;
             _audioSampleBatch = RetroAudioSampleBatch;
             _inputPoll = RetroInputPoll;
             _inputState = RetroInputState;
+            
+            SystemInfo = new SystemInfo();
+            Bridges.retro_get_system_info(ref SystemInfo);
             Bridges.retro_set_environment(_environment);
             Bridges.retro_set_video_refresh(_videoRefresh);
             Bridges.retro_set_audio_sample(_audioSample);
@@ -69,36 +70,40 @@ namespace UnitySnes
         private static unsafe void RetroVideoRefresh(void* data, uint width, uint height, uint pitch)
         {
             var pixels = (IntPtr) data;
+            var index = 0;
+            var offset = 0;
             switch (_pixelFormat)
             {
                 case PixelFormat.RetroPixelFormat0Rgb1555:
+                    offset = 2;
                     for (var i = 0; i < height; i++)
                     {
                         for (var j = 0; j < width; j++)
                         {
                             var packed = Marshal.ReadInt16(pixels);
-                            var color = new Color(((packed >> 10) & 0x001F) / 31.0f,
-                                ((packed >> 5) & 0x001F) / 31.0f, (packed & 0x001F) / 31.0f, 1.0f);
-                            _gameTexture.SetPixel(i, j, color);
+                            var c = ((short) (packed << 1) & 0xFFE0) | packed & 0x001F;
+                            _dst[index++] = (byte) (c >> 8);
+                            _dst[index++] = (byte) (c & 0xFF);
+                            pixels = new IntPtr(pixels.ToInt64() + offset);
                         }
-
-                        _gameTexture.Apply();
                     }
-
                     break;
                 case PixelFormat.RetroPixelFormatXrgb8888:
+                    offset = 4;
                     for (var i = 0; i < height; i++)
                     {
                         for (var j = 0; j < width; j++)
                         {
                             var packed = Marshal.ReadInt32(pixels);
-                            var color = new Color(((packed >> 16) & 0x00FF) / 255.0f,
-                                ((packed >> 8) & 0x00FF) / 255.0f, (packed & 0x00FF) / 255.0f, 1.0f);
-                            _gameTexture.SetPixel(i, j, color);
+                            var r = (short) (((packed >> 16) & 0x00FF) / 7905.0f); // 7905 = 255 * 31
+                            var g = (short) (((packed >> 8) & 0x00FF) / 16065.0f); // 16065 = 255 * 63
+                            var b = (short) ((packed & 0x00FF) / 7905.0f);
+                            var c = (short) (r << 11) | (short) (g << 5) | b;
+                            _dst[index++] = (byte) (c >> 8);
+                            _dst[index++] = (byte) (c & 0xFF);
+                            pixels = new IntPtr(pixels.ToInt64() + offset);
                         }
                     }
-
-                    _gameTexture.Apply();
                     break;
                 case PixelFormat.RetroPixelFormatRgb565:
                     for (var k = 0; k < height; k++)
@@ -106,15 +111,14 @@ namespace UnitySnes
                         Marshal.Copy(pixels, _dst, k * _linebytes, _linebytes);
                         pixels = new IntPtr(pixels.ToInt64() + pitch);
                     }
-
-                    _gameTexture.LoadRawTextureData(_dst);
-                    _gameTexture.Apply();
                     break;
                 case PixelFormat.RetroPixelFormatUnknown:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+            _gameTexture.LoadRawTextureData(_dst);
+            _gameTexture.Apply();
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroAudioSampleDelegate))]
@@ -126,17 +130,14 @@ namespace UnitySnes
         [MonoPInvokeCallback(typeof(Bridges.RetroAudioSampleBatchDelegate))]
         private static unsafe void RetroAudioSampleBatch(short* data, uint frames)
         {
-            for (var i = 0; i < (int) frames; i++)
+            const int offset = sizeof(short);
+            for (var i = 0; i < frames; i++)
             {
                 var chunk = Marshal.ReadInt16((IntPtr) data);
-                data += sizeof(short); // Set pointer to next chunk.
-                var value = chunk / 32768f; // Divide by Int16 max to get correct float value.
-                value = Mathf.Clamp(value, -1.0f, 1.0f); // Unity's audio only takes values between -1 and 1.
-
-                AudioBatch[_batchPosition] = value;
+                data += offset;
+                AudioBatch[_batchPosition] = chunk / 32768f;
                 _batchPosition++;
 
-                // When the batch is filled send it to the speakers.
                 if (_batchPosition >= AudioBatchSize - 1)
                 {
                     _gameSpeaker.UpdateAudio(AudioBatch);
@@ -151,11 +152,11 @@ namespace UnitySnes
             // Unused
         }
 #if NO_INPUT
-            [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
-            private static short RetroInputState(uint port, uint device, uint index, uint id)
-            {
-                return 0;
-            }
+        [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
+        private static short RetroInputState(uint port, uint device, uint index, uint id)
+        {
+            return 0;
+        }
 #elif UNITY_EDITOR
         [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
         private static short RetroInputState(uint port, uint device, uint index, uint id)
@@ -210,53 +211,6 @@ namespace UnitySnes
                     return 0;
             }
         }
-#else
-            public static bool PressingB;
-            public static bool PressingY;
-            public static bool PressingSelect;
-            public static bool PressingStart;
-            public static bool PressingUp;
-            public static bool PressingDown;
-            public static bool PressingLeft;
-            public static bool PressingRight;
-            public static bool PressingA;
-            public static bool PressingX;
-            public static bool PressingL1;
-            public static bool PressingR1;
-
-            [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
-            private static short RetroInputState(uint port, uint device, uint index, uint id)
-            {
-                switch (id)
-                {
-                    case 0:
-                        return PressingB ? (short) 1 : (short) 0; // B
-                    case 1:
-                        return PressingY ? (short) 1 : (short) 0; // Y
-                    case 2:
-                        return PressingSelect ? (short) 1 : (short) 0; // SELECT
-                    case 3:
-                        return PressingStart ? (short) 1 : (short) 0; // START
-                    case 4:
-                        return PressingUp ? (short) 1 : (short) 0; // UP
-                    case 5:
-                        return PressingDown ? (short) 1 : (short) 0; // DOWN
-                    case 6:
-                        return PressingLeft ? (short) 1 : (short) 0; // LEFT
-                    case 7:
-                        return PressingRight ? (short) 1 : (short) 0; // RIGHT
-                    case 8:
-                        return PressingA ? (short) 1 : (short) 0; // A
-                    case 9:
-                        return PressingX ? (short) 1 : (short) 0; // X
-                    case 10:
-                        return PressingL1 ? (short) 1 : (short) 0; // L
-                    case 11:
-                        return PressingR1 ? (short) 1 : (short) 0; // R
-                    default:
-                        return 0;
-                }
-            }
 #endif
         [MonoPInvokeCallback(typeof(Bridges.RetroEnvironmentDelegate))]
         private static unsafe bool RetroEnvironment(uint cmd, void* data)
@@ -293,48 +247,39 @@ namespace UnitySnes
             return true;
         }
 
-        private unsafe char* StringToChar(string s)
+        public unsafe void LoadGame(byte[] bytes, string path = null)
         {
-            var p = Marshal.StringToHGlobalUni(s);
-            return (char*) p.ToPointer();
-        }
-
-        private unsafe GameInfo LoadGameInfo(byte[] bytes, string path = null)
-        {
-            var gameInfo = new GameInfo();
-
+            if (path == null)
+                path = Path.GetTempFileName();
             var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
             Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
 
-            gameInfo.path = StringToChar(string.IsNullOrEmpty(path) ? Path.GetTempFileName() : path);
-            gameInfo.size = (uint) bytes.Length;
-            gameInfo.data = arrayPointer.ToPointer();
+            GameInfo = new GameInfo
+            {
+                path = (char*) Marshal.StringToHGlobalUni(path).ToPointer(),
+                size = (uint) bytes.Length,
+                data = arrayPointer.ToPointer()
+            };
 
-            return gameInfo;
+            LoadGame(GameInfo);
         }
 
-        public bool LoadGame(byte[] bytes)
+        public void LoadGame(GameInfo gameInfo)
         {
-            return LoadGame(LoadGameInfo(bytes));
-        }
+            GameInfo = gameInfo;
+            if (!Bridges.retro_load_game(ref gameInfo))
+                throw new ArgumentException();
+            SystemAvInfo = new SystemAvInfo();
+            Bridges.retro_get_system_av_info(ref SystemAvInfo);
 
-        public bool LoadGame(GameInfo gameInfo)
-        {
-            var ret = Bridges.retro_load_game(ref gameInfo);
-            Console.WriteLine("Game information: {0}", gameInfo);
-
-            var av = new SystemAvInfo();
-            Bridges.retro_get_system_av_info(ref av);
-            Console.WriteLine("SYstem AV information: {0}", av);
-
-            var w = Convert.ToInt32(av.geometry.base_width);
-            var h = Convert.ToInt32(av.geometry.base_height);
+            
+            // make unity components
+            var w = Convert.ToInt32(SystemAvInfo.geometry.base_width);
+            var h = Convert.ToInt32(SystemAvInfo.geometry.base_height);
             _gameTexture = new Texture2D(w, h, TextureFormat.RGB565, false) {filterMode = FilterMode.Point};
             _gameRenderer.material.mainTexture = _gameTexture;
             _linebytes = 2 * w;
             _dst = new byte[_linebytes * h];
-
-            return ret;
         }
 
         public void UnloadGame()

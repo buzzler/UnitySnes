@@ -12,11 +12,8 @@ namespace UnitySnes
         private void Start()
         {
             _speaker = GetComponent<AudioSource>();
-            var clip = AudioClip.Create("Libretro", System.AudioBatchSize / 2, 2, 44100, true,
-                OnAudioRead);
-            _speaker.clip = clip;
-            _speaker.Play();
-            Debug.Log("Unity sample rate: " + AudioSettings.outputSampleRate);
+            _speaker.clip = AudioClip.Create("UnitySnes", System.AudioBatchSize / 2, 2, 32040, true, OnAudioRead); //44100
+            _speaker.loop = true;
         }
 
         public void UpdateAudio(float[] sampleData)
