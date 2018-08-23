@@ -11,7 +11,8 @@ namespace UnitySnes
         private void Start()
         {
             AudioSource = GetComponent<AudioSource>();
-            AudioSource.clip = AudioClip.Create("UnitySnes", System.AudioBatchSize / 2, 2, 32040, true, OnAudioRead); //44100
+            AudioSource.clip = AudioClip.Create("UnitySnes", System.AudioBatchSize / 2, 2, 44100, true, OnAudioRead); //44100
+            AudioSource.loop = true;
         }
 
         public void UpdateAudio(float[] sampleData)

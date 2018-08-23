@@ -151,13 +151,13 @@ namespace UnitySnes
         {
             // Unused
         }
-#if NO_INPUT
+#if !UNITY_EDITOR
         [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
         private static short RetroInputState(uint port, uint device, uint index, uint id)
         {
             return 0;
         }
-#elif UNITY_EDITOR
+#else
         [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
         private static short RetroInputState(uint port, uint device, uint index, uint id)
         {
