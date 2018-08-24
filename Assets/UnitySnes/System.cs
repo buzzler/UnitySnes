@@ -8,23 +8,15 @@ namespace UnitySnes
 {
     public class System
     {
-        public const int AudioBatchSize = 4096;
         public SystemInfo SystemInfo;
         public GameInfo GameInfo;
         public SystemAvInfo SystemAvInfo;
-        
-        private static readonly float[] AudioBatch = new float[AudioBatchSize]; // static for IL2CPP
-        private static int _batchPosition; // static for IL2CPP
-        private static PixelFormat _pixelFormat; // static for IL2CPP
-        
-        private Renderer _gameRenderer;
-        private static Speaker _gameSpeaker; // static for IL2CPP
-        private static Texture2D _gameTexture; // static for IL2CPP
-        
-        private static byte[] _src; // static for IL2CPP
-        private static byte[] _dst; // static for IL2CPP
-        private static int _linebytes; // static for IL2CPP
-        
+
+        private static Buffers _buffers;
+        private static Action<IntPtr, uint, uint, uint> _onVideoRefresh;
+        private static Action<Buffers> _onVideoUpdate;
+        private static Action<Buffers> _onAudioUpdate; // static for IL2CPP
+
         private Bridges.RetroEnvironmentDelegate _environment;
         private Bridges.RetroVideoRefreshDelegate _videoRefresh;
         private Bridges.RetroAudioSampleDelegate _audioSample;
@@ -32,11 +24,10 @@ namespace UnitySnes
         private Bridges.RetroInputPollDelegate _inputPoll;
         private Bridges.RetroInputStateDelegate _inputState;
 
-        public unsafe void Init(Renderer renderer, Speaker speaker)
+        public unsafe void Init(Action<Buffers> onVideoUpdate, Action<Buffers> onAudioUpdate)
         {
-            _gameRenderer = renderer;
-            _gameSpeaker = speaker;
-            _gameTexture = null;
+            _onVideoUpdate = onVideoUpdate;
+            _onAudioUpdate = onAudioUpdate;
 
             _environment = RetroEnvironment;
             _videoRefresh = RetroVideoRefresh;
@@ -69,56 +60,56 @@ namespace UnitySnes
         [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]
         private static unsafe void RetroVideoRefresh(void* data, uint width, uint height, uint pitch)
         {
-            var pixels = (IntPtr) data;
+            _onVideoRefresh((IntPtr) data, width, height, pitch);
+            _onVideoUpdate(_buffers);
+        }
+
+        private static void RetroVideoRefresh0Rgb1555(IntPtr pixels, uint width, uint height, uint pitch)
+        {
             var index = 0;
-            var offset = 0;
-            switch (_pixelFormat)
+            for (var i = 0; i < height; i++)
             {
-                case PixelFormat.RetroPixelFormat0Rgb1555:
-                    offset = 2;
-                    for (var i = 0; i < height; i++)
-                    {
-                        for (var j = 0; j < width; j++)
-                        {
-                            var packed = Marshal.ReadInt16(pixels);
-                            var c = ((short) (packed << 1) & 0xFFE0) | packed & 0x001F;
-                            _dst[index++] = (byte) (c >> 8);
-                            _dst[index++] = (byte) (c & 0xFF);
-                            pixels = new IntPtr(pixels.ToInt64() + offset);
-                        }
-                    }
-                    break;
-                case PixelFormat.RetroPixelFormatXrgb8888:
-                    offset = 4;
-                    for (var i = 0; i < height; i++)
-                    {
-                        for (var j = 0; j < width; j++)
-                        {
-                            var packed = Marshal.ReadInt32(pixels);
-                            var r = (short) (((packed >> 16) & 0x00FF) / 7905.0f); // 7905 = 255 * 31
-                            var g = (short) (((packed >> 8) & 0x00FF) / 16065.0f); // 16065 = 255 * 63
-                            var b = (short) ((packed & 0x00FF) / 7905.0f);
-                            var c = (short) (r << 11) | (short) (g << 5) | b;
-                            _dst[index++] = (byte) (c >> 8);
-                            _dst[index++] = (byte) (c & 0xFF);
-                            pixels = new IntPtr(pixels.ToInt64() + offset);
-                        }
-                    }
-                    break;
-                case PixelFormat.RetroPixelFormatRgb565:
-                    for (var k = 0; k < height; k++)
-                    {
-                        Marshal.Copy(pixels, _dst, k * _linebytes, _linebytes);
-                        pixels = new IntPtr(pixels.ToInt64() + pitch);
-                    }
-                    break;
-                case PixelFormat.RetroPixelFormatUnknown:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                for (var j = 0; j < width; j++)
+                {
+                    var packed = Marshal.ReadInt16(pixels);
+                    var c = ((short) (packed << 1) & 0xFFE0) | packed & 0x001F;
+                    _buffers.VideoBuffer[index++] = (byte) (c >> 8);
+                    _buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
+                    pixels = new IntPtr(pixels.ToInt64() + 2);
+                }
             }
-            _gameTexture.LoadRawTextureData(_dst);
-            _gameTexture.Apply();
+        }
+        
+        private static void RetroVideoRefreshXrgb8888(IntPtr pixels, uint width, uint height, uint pitch)
+        {
+            var index = 0;
+            for (var i = 0; i < height; i++)
+            {
+                for (var j = 0; j < width; j++)
+                {
+                    var packed = Marshal.ReadInt32(pixels);
+                    var r = (short) (((packed >> 16) & 0x00FF) / 7905.0f); // 7905 = 255 * 31
+                    var g = (short) (((packed >> 8) & 0x00FF) / 16065.0f); // 16065 = 255 * 63
+                    var b = (short) ((packed & 0x00FF) / 7905.0f);
+                    var c = (short) (r << 11) | (short) (g << 5) | b;
+                    _buffers.VideoBuffer[index++] = (byte) (c >> 8);
+                    _buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
+                    pixels = new IntPtr(pixels.ToInt64() + 4);
+                }
+            }
+        }
+        
+        private static void RetroVideoRefreshRgb565(IntPtr pixels, uint width, uint height, uint pitch)
+        {
+            for (var k = 0; k < height; k++)
+            {
+                Marshal.Copy(pixels, _buffers.VideoBuffer, k * _buffers.VideoLineBytes, _buffers.VideoLineBytes);
+                pixels = new IntPtr(pixels.ToInt64() + pitch);
+            }
+        }
+        
+        private static void RetroVideoRefreshUnknown(IntPtr pixels, uint width, uint height, uint pitch)
+        {
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroAudioSampleDelegate))]
@@ -135,13 +126,12 @@ namespace UnitySnes
             {
                 var chunk = Marshal.ReadInt16((IntPtr) data);
                 data += offset;
-                AudioBatch[_batchPosition] = chunk / 32768f;
-                _batchPosition++;
+                _buffers.AudioBuffer[_buffers.AudioPosition++] = chunk / 32768f;
 
-                if (_batchPosition >= AudioBatchSize - 1)
+                if (_buffers.AudioPosition >= _buffers.AudioBufferSize - 1)
                 {
-                    _gameSpeaker.UpdateAudio(AudioBatch);
-                    _batchPosition = 0;
+                    _onAudioUpdate(_buffers);
+                    _buffers.AudioPosition = 0;
                 }
             }
         }
@@ -234,7 +224,22 @@ namespace UnitySnes
                 case Environment.RetroEnvironmentGetSystemDirectory:
                     break;
                 case Environment.RetroEnvironmentSetPixelFormat:
-                    _pixelFormat = *(PixelFormat*) data;
+                    var pixelFormat = *(PixelFormat*) data;
+                    switch (pixelFormat)
+                    {
+                        case PixelFormat.RetroPixelFormat0Rgb1555:
+                            _onVideoRefresh = RetroVideoRefresh0Rgb1555;
+                            break;
+                        case PixelFormat.RetroPixelFormatXrgb8888:
+                            _onVideoRefresh = RetroVideoRefreshXrgb8888;
+                            break;
+                        case PixelFormat.RetroPixelFormatRgb565:
+                            _onVideoRefresh = RetroVideoRefreshRgb565;
+                            break;
+                        default:
+                            _onVideoRefresh = RetroVideoRefreshUnknown;
+                            break;
+                    }
                     break;
                 case Environment.RetroEnvironmentSetInputDescriptors:
                     break;
@@ -271,15 +276,7 @@ namespace UnitySnes
                 throw new ArgumentException();
             SystemAvInfo = new SystemAvInfo();
             Bridges.retro_get_system_av_info(ref SystemAvInfo);
-
-            
-            // make unity components
-            var w = Convert.ToInt32(SystemAvInfo.geometry.base_width);
-            var h = Convert.ToInt32(SystemAvInfo.geometry.base_height);
-            _gameTexture = new Texture2D(w, h, TextureFormat.RGB565, false) {filterMode = FilterMode.Point};
-            _gameRenderer.material.mainTexture = _gameTexture;
-            _linebytes = 2 * w;
-            _dst = new byte[_linebytes * h];
+            _buffers = new Buffers(SystemAvInfo);
         }
 
         public void UnloadGame()
