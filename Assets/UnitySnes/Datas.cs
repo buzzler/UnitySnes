@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace UnitySnes
 {
@@ -54,17 +53,6 @@ namespace UnitySnes
         [MarshalAs(UnmanagedType.U1)] public bool need_fullpath;
 
         [MarshalAs(UnmanagedType.U1)] public bool block_extract;
-
-        public override string ToString()
-        {
-            var coreName = Marshal.PtrToStringAnsi((IntPtr) library_name);
-            var coreVersion = Marshal.PtrToStringAnsi((IntPtr) library_version);
-            var validExtensions = Marshal.PtrToStringAnsi((IntPtr) valid_extensions);
-
-            return string.Format(
-                "Core Name: {0}\nCore Version: {1}\nValid Extensions: {2}\nNeed FullPath: {3}\nBlock Extract: {4}",
-                coreName, coreVersion, validExtensions, need_fullpath, block_extract);
-        }
     }
 
     public class Environment

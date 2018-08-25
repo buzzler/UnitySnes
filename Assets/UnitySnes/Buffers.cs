@@ -7,8 +7,10 @@ namespace UnitySnes
         public float[] AudioBuffer;
         public int AudioPosition;
         public int AudioBufferSize;
+        public bool AudioUpdated;
         public byte[] VideoBuffer;
         public int VideoLineBytes;
+        public bool VideoUpdated;
         public short[] InputBuffer;
         
         public Buffers(SystemAvInfo info)
@@ -19,8 +21,10 @@ namespace UnitySnes
             AudioBufferSize = 4096;
             AudioBuffer = new float[AudioBufferSize];
             AudioPosition = 0;
+            AudioUpdated = false;
             VideoLineBytes = 2 * w;
             VideoBuffer = new byte[VideoLineBytes * h];
+            VideoUpdated = false;
             InputBuffer = new short[16];
         }
 

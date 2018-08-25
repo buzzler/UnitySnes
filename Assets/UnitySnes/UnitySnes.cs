@@ -20,16 +20,17 @@ namespace UnitySnes
         private void Update()
         {
             OnInputUpdate();
-            
-            // TODO : multi-thread...
-            if (IsTurnedOn)
-                _system.Update();
+            OnAudioUpdate();
+            OnVideoUpdate();
         }
 
         private void OnAudioUpdate()
         {
-            if (System.Buffers.AudioBuffer != null)
+            if (System.Buffers.AudioUpdated)
+            {
                 AudioSource.Play();
+                System.Buffers.AudioUpdated = false;
+            }
         }
 
         private void OnAudioRead(float[] sampleData)
@@ -39,8 +40,12 @@ namespace UnitySnes
 
         private void OnVideoUpdate()
         {
-            Texture.LoadRawTextureData(System.Buffers.VideoBuffer);
-            Texture.Apply();
+            if (System.Buffers.VideoUpdated)
+            {
+                Texture.LoadRawTextureData(System.Buffers.VideoBuffer);
+                Texture.Apply();
+                System.Buffers.VideoUpdated = false;
+            }
         }
 
         private void OnInputUpdate()
@@ -70,10 +75,8 @@ namespace UnitySnes
         {
             if (_system != null)
                 return;
-
             _system = new System();
-            _system.Init(OnVideoUpdate, OnAudioUpdate);
-            _system.LoadGame(Rom.bytes);
+            _system.On(Rom.bytes);
 
             var w = Convert.ToInt32(System.SystemAvInfo.geometry.base_width);
             var h = Convert.ToInt32(System.SystemAvInfo.geometry.base_height);
@@ -89,15 +92,12 @@ namespace UnitySnes
         {
             if (_system == null)
                 return;
+            _system.Off();
 
             AudioSource.Stop();
             AudioSource.clip = null;
             Display.material.mainTexture = null;
             Texture = null;
-
-            _system.UnloadGame();
-            _system.DeInit();
-            _system = null;
         }
 
         private void OnDisable()

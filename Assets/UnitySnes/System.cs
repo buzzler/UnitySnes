@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using AOT;
 
 namespace UnitySnes
@@ -13,21 +14,31 @@ namespace UnitySnes
         public static Buffers Buffers; // set by LoadGame
 
         private static Action<IntPtr, uint, uint, uint> _onVideoRefresh;
-        private static Action _onVideoUpdate;
-        private static Action _onAudioUpdate;
-
         private Bridges.RetroEnvironmentDelegate _environment;
         private Bridges.RetroVideoRefreshDelegate _videoRefresh;
         private Bridges.RetroAudioSampleDelegate _audioSample;
         private Bridges.RetroAudioSampleBatchDelegate _audioSampleBatch;
         private Bridges.RetroInputPollDelegate _inputPoll;
         private Bridges.RetroInputStateDelegate _inputState;
-
-        public unsafe void Init(Action onVideoUpdate, Action onAudioUpdate)
+        private Thread _thread;
+        private bool _active;
+        
+        public void On(byte[] rom)
         {
-            _onVideoUpdate = onVideoUpdate;
-            _onAudioUpdate = onAudioUpdate;
+            Init();
+            LoadGame(rom);
+            _active = true;
+            _thread = new Thread(Loop);
+            _thread.Start();
+        }
 
+        public void Off()
+        {
+            _active = false;
+        }
+        
+        private unsafe void Init()
+        {
             _environment = RetroEnvironment;
             _videoRefresh = RetroVideoRefresh;
             _audioSample = RetroAudioSample;
@@ -46,34 +57,40 @@ namespace UnitySnes
             Bridges.retro_init();
         }
 
-        public void DeInit()
+        private void Loop()
         {
+            const int frame = (int) (1000f / 60f);
+            while (_active)
+            {
+                Thread.Sleep(frame);
+                Bridges.retro_run();
+            }
+            
+            _thread.Abort();
+            _thread = null;
+            Bridges.retro_unload_game();
             Bridges.retro_deinit();
-        }
-
-        public void Update()
-        {
-            Bridges.retro_run();
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]
         private static unsafe void RetroVideoRefresh(void* data, uint width, uint height, uint pitch)
         {
             _onVideoRefresh((IntPtr) data, width, height, pitch);
-            _onVideoUpdate();
+            Buffers.VideoUpdated = true;
         }
 
         private static void RetroVideoRefresh0Rgb1555(IntPtr pixels, uint width, uint height, uint pitch)
         {
+            var videoBuffer = Buffers.VideoBuffer;
             var index = 0;
-            for (var i = 0; i < height; i++)
+            for (var y = 0; y < height; y++)
             {
-                for (var j = 0; j < width; j++)
+                for (var x = 0; x < width; x++)
                 {
                     var packed = Marshal.ReadInt16(pixels);
                     var c = ((short) (packed << 1) & 0xFFE0) | packed & 0x001F;
-                    Buffers.VideoBuffer[index++] = (byte) (c >> 8);
-                    Buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
+                    videoBuffer[index++] = (byte) (c >> 8);
+                    videoBuffer[index++] = (byte) (c & 0xFF);
                     pixels = new IntPtr(pixels.ToInt64() + 2);
                 }
             }
@@ -81,18 +98,19 @@ namespace UnitySnes
         
         private static void RetroVideoRefreshXrgb8888(IntPtr pixels, uint width, uint height, uint pitch)
         {
+            var videoBuffer = Buffers.VideoBuffer;
             var index = 0;
-            for (var i = 0; i < height; i++)
+            for (var y = 0; y < height; y++)
             {
-                for (var j = 0; j < width; j++)
+                for (var x = 0; x < width; x++)
                 {
                     var packed = Marshal.ReadInt32(pixels);
                     var r = (short) (((packed >> 16) & 0x00FF) / 7905.0f); // 7905 = 255 * 31
                     var g = (short) (((packed >> 8) & 0x00FF) / 16065.0f); // 16065 = 255 * 63
                     var b = (short) ((packed & 0x00FF) / 7905.0f);
                     var c = (short) (r << 11) | (short) (g << 5) | b;
-                    Buffers.VideoBuffer[index++] = (byte) (c >> 8);
-                    Buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
+                    videoBuffer[index++] = (byte) (c >> 8);
+                    videoBuffer[index++] = (byte) (c & 0xFF);
                     pixels = new IntPtr(pixels.ToInt64() + 4);
                 }
             }
@@ -100,9 +118,11 @@ namespace UnitySnes
         
         private static void RetroVideoRefreshRgb565(IntPtr pixels, uint width, uint height, uint pitch)
         {
-            for (var k = 0; k < height; k++)
+            var videoBuffer = Buffers.VideoBuffer;
+            var videoLineByte = Buffers.VideoLineBytes;
+            for (var y = 0; y < height; y++)
             {
-                Marshal.Copy(pixels, Buffers.VideoBuffer, k * Buffers.VideoLineBytes, Buffers.VideoLineBytes);
+                Marshal.Copy(pixels, videoBuffer, y * videoLineByte, videoLineByte);
                 pixels = new IntPtr(pixels.ToInt64() + pitch);
             }
         }
@@ -129,7 +149,7 @@ namespace UnitySnes
 
                 if (Buffers.AudioPosition >= Buffers.AudioBufferSize - 1)
                 {
-                    _onAudioUpdate();
+                    Buffers.AudioUpdated = true;
                     Buffers.AudioPosition = 0;
                 }
             }
@@ -144,7 +164,7 @@ namespace UnitySnes
         [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
         private static short RetroInputState(uint port, uint device, uint index, uint id)
         {
-            return Buffers.InputBuffer[id];
+            return port == 0 ? Buffers.InputBuffer[(int)id] : (short) 0;
         }
         [MonoPInvokeCallback(typeof(Bridges.RetroEnvironmentDelegate))]
         private static unsafe bool RetroEnvironment(uint cmd, void* data)
@@ -196,16 +216,14 @@ namespace UnitySnes
             return true;
         }
 
-        public unsafe void LoadGame(byte[] bytes, string path = null)
+        private unsafe void LoadGame(byte[] bytes)
         {
-            if (path == null)
-                path = Path.GetTempFileName();
             var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
             Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
 
             GameInfo = new GameInfo
             {
-                path = (char*) Marshal.StringToHGlobalUni(path).ToPointer(),
+                path = (char*) Marshal.StringToHGlobalUni(Path.GetTempFileName()).ToPointer(),
                 size = (uint) bytes.Length,
                 data = arrayPointer.ToPointer()
             };
@@ -215,11 +233,6 @@ namespace UnitySnes
             SystemAvInfo = new SystemAvInfo();
             Bridges.retro_get_system_av_info(ref SystemAvInfo);
             Buffers = new Buffers(SystemAvInfo);
-        }
-
-        public void UnloadGame()
-        {
-            Bridges.retro_unload_game();
         }
     }
 }
