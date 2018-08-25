@@ -9,6 +9,7 @@ namespace UnitySnes
         public int AudioBufferSize;
         public byte[] VideoBuffer;
         public int VideoLineBytes;
+        public short[] InputBuffer;
         
         public Buffers(SystemAvInfo info)
         {
@@ -20,12 +21,14 @@ namespace UnitySnes
             AudioPosition = 0;
             VideoLineBytes = 2 * w;
             VideoBuffer = new byte[VideoLineBytes * h];
+            InputBuffer = new short[16];
         }
 
         public void Dispose()
         {
             AudioBuffer = null;
             VideoBuffer = null;
+            InputBuffer = null;
         }
     }
 }

@@ -2,20 +2,19 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using AOT;
-using UnityEngine;
 
 namespace UnitySnes
 {
     public class System
     {
-        public SystemInfo SystemInfo;
-        public GameInfo GameInfo;
-        public SystemAvInfo SystemAvInfo;
+        public static SystemInfo SystemInfo; // set by Init
+        public static GameInfo GameInfo; // set by LoadGame
+        public static SystemAvInfo SystemAvInfo; // set by LoadGame
+        public static Buffers Buffers; // set by LoadGame
 
-        private static Buffers _buffers;
         private static Action<IntPtr, uint, uint, uint> _onVideoRefresh;
-        private static Action<Buffers> _onVideoUpdate;
-        private static Action<Buffers> _onAudioUpdate; // static for IL2CPP
+        private static Action _onVideoUpdate;
+        private static Action _onAudioUpdate;
 
         private Bridges.RetroEnvironmentDelegate _environment;
         private Bridges.RetroVideoRefreshDelegate _videoRefresh;
@@ -24,7 +23,7 @@ namespace UnitySnes
         private Bridges.RetroInputPollDelegate _inputPoll;
         private Bridges.RetroInputStateDelegate _inputState;
 
-        public unsafe void Init(Action<Buffers> onVideoUpdate, Action<Buffers> onAudioUpdate)
+        public unsafe void Init(Action onVideoUpdate, Action onAudioUpdate)
         {
             _onVideoUpdate = onVideoUpdate;
             _onAudioUpdate = onAudioUpdate;
@@ -61,7 +60,7 @@ namespace UnitySnes
         private static unsafe void RetroVideoRefresh(void* data, uint width, uint height, uint pitch)
         {
             _onVideoRefresh((IntPtr) data, width, height, pitch);
-            _onVideoUpdate(_buffers);
+            _onVideoUpdate();
         }
 
         private static void RetroVideoRefresh0Rgb1555(IntPtr pixels, uint width, uint height, uint pitch)
@@ -73,8 +72,8 @@ namespace UnitySnes
                 {
                     var packed = Marshal.ReadInt16(pixels);
                     var c = ((short) (packed << 1) & 0xFFE0) | packed & 0x001F;
-                    _buffers.VideoBuffer[index++] = (byte) (c >> 8);
-                    _buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
+                    Buffers.VideoBuffer[index++] = (byte) (c >> 8);
+                    Buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
                     pixels = new IntPtr(pixels.ToInt64() + 2);
                 }
             }
@@ -92,8 +91,8 @@ namespace UnitySnes
                     var g = (short) (((packed >> 8) & 0x00FF) / 16065.0f); // 16065 = 255 * 63
                     var b = (short) ((packed & 0x00FF) / 7905.0f);
                     var c = (short) (r << 11) | (short) (g << 5) | b;
-                    _buffers.VideoBuffer[index++] = (byte) (c >> 8);
-                    _buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
+                    Buffers.VideoBuffer[index++] = (byte) (c >> 8);
+                    Buffers.VideoBuffer[index++] = (byte) (c & 0xFF);
                     pixels = new IntPtr(pixels.ToInt64() + 4);
                 }
             }
@@ -103,7 +102,7 @@ namespace UnitySnes
         {
             for (var k = 0; k < height; k++)
             {
-                Marshal.Copy(pixels, _buffers.VideoBuffer, k * _buffers.VideoLineBytes, _buffers.VideoLineBytes);
+                Marshal.Copy(pixels, Buffers.VideoBuffer, k * Buffers.VideoLineBytes, Buffers.VideoLineBytes);
                 pixels = new IntPtr(pixels.ToInt64() + pitch);
             }
         }
@@ -126,12 +125,12 @@ namespace UnitySnes
             {
                 var chunk = Marshal.ReadInt16((IntPtr) data);
                 data += offset;
-                _buffers.AudioBuffer[_buffers.AudioPosition++] = chunk / 32768f;
+                Buffers.AudioBuffer[Buffers.AudioPosition++] = chunk / 32768f;
 
-                if (_buffers.AudioPosition >= _buffers.AudioBufferSize - 1)
+                if (Buffers.AudioPosition >= Buffers.AudioBufferSize - 1)
                 {
-                    _onAudioUpdate(_buffers);
-                    _buffers.AudioPosition = 0;
+                    _onAudioUpdate();
+                    Buffers.AudioPosition = 0;
                 }
             }
         }
@@ -141,67 +140,12 @@ namespace UnitySnes
         {
             // Unused
         }
-#if !UNITY_EDITOR
+
         [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
         private static short RetroInputState(uint port, uint device, uint index, uint id)
         {
-            return 0;
+            return Buffers.InputBuffer[id];
         }
-#else
-        [MonoPInvokeCallback(typeof(Bridges.RetroInputStateDelegate))]
-        private static short RetroInputState(uint port, uint device, uint index, uint id)
-        {
-            switch (id)
-            {
-                case 0:
-                    return Input.GetKey(KeyCode.Z) || Input.GetButton("B") ? (short) 1 : (short) 0; // B
-                case 1:
-                    return Input.GetKey(KeyCode.A) || Input.GetButton("Y") ? (short) 1 : (short) 0; // Y
-                case 2:
-                    return Input.GetKey(KeyCode.Space) || Input.GetButton("SELECT")
-                        ? (short) 1
-                        : (short) 0; // SELECT
-                case 3:
-                    return Input.GetKey(KeyCode.Return) || Input.GetButton("START")
-                        ? (short) 1
-                        : (short) 0; // START
-                case 4:
-                    return Input.GetKey(KeyCode.UpArrow) || Input.GetAxisRaw("DpadX") >= 1.0f
-                        ? (short) 1
-                        : (short) 0; // UP
-                case 5:
-                    return Input.GetKey(KeyCode.DownArrow) || Input.GetAxisRaw("DpadX") <= -1.0f
-                        ? (short) 1
-                        : (short) 0; // DOWN
-                case 6:
-                    return Input.GetKey(KeyCode.LeftArrow) || Input.GetAxisRaw("DpadY") <= -1.0f
-                        ? (short) 1
-                        : (short) 0; // LEFT
-                case 7:
-                    return Input.GetKey(KeyCode.RightArrow) || Input.GetAxisRaw("DpadY") >= 1.0f
-                        ? (short) 1
-                        : (short) 0; // RIGHT
-                case 8:
-                    return Input.GetKey(KeyCode.X) || Input.GetButton("A") ? (short) 1 : (short) 0; // A
-                case 9:
-                    return Input.GetKey(KeyCode.S) || Input.GetButton("X") ? (short) 1 : (short) 0; // X
-                case 10:
-                    return Input.GetKey(KeyCode.Q) || Input.GetButton("L") ? (short) 1 : (short) 0; // L
-                case 11:
-                    return Input.GetKey(KeyCode.W) || Input.GetButton("R") ? (short) 1 : (short) 0; // R
-                case 12:
-                    return Input.GetKey(KeyCode.E) ? (short) 1 : (short) 0;
-                case 13:
-                    return Input.GetKey(KeyCode.R) ? (short) 1 : (short) 0;
-                case 14:
-                    return Input.GetKey(KeyCode.T) ? (short) 1 : (short) 0;
-                case 15:
-                    return Input.GetKey(KeyCode.Y) ? (short) 1 : (short) 0;
-                default:
-                    return 0;
-            }
-        }
-#endif
         [MonoPInvokeCallback(typeof(Bridges.RetroEnvironmentDelegate))]
         private static unsafe bool RetroEnvironment(uint cmd, void* data)
         {
@@ -266,17 +210,11 @@ namespace UnitySnes
                 data = arrayPointer.ToPointer()
             };
 
-            LoadGame(GameInfo);
-        }
-
-        public void LoadGame(GameInfo gameInfo)
-        {
-            GameInfo = gameInfo;
-            if (!Bridges.retro_load_game(ref gameInfo))
+            if (!Bridges.retro_load_game(ref GameInfo))
                 throw new ArgumentException();
             SystemAvInfo = new SystemAvInfo();
             Bridges.retro_get_system_av_info(ref SystemAvInfo);
-            _buffers = new Buffers(SystemAvInfo);
+            Buffers = new Buffers(SystemAvInfo);
         }
 
         public void UnloadGame()
