@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UnitySnes
 {
-    public class UnitySnes : MonoBehaviour
+    public class SnesConsole : MonoBehaviour
     {
         public TextAsset Rom;
         public Renderer Display;
@@ -19,6 +19,7 @@ namespace UnitySnes
 
         private void Update()
         {
+            _system.Loop();
             OnInputUpdate();
             OnAudioUpdate();
             OnVideoUpdate();
@@ -26,11 +27,10 @@ namespace UnitySnes
 
         private void OnAudioUpdate()
         {
-            if (System.Buffers.AudioUpdated)
-            {
-                AudioSource.Play();
-                System.Buffers.AudioUpdated = false;
-            }
+            var buffer = System.Buffers;
+            if (!buffer.AudioUpdated) return;
+            AudioSource.Play();
+            buffer.AudioUpdated = false;
         }
 
         private void OnAudioRead(float[] sampleData)
@@ -40,12 +40,12 @@ namespace UnitySnes
 
         private void OnVideoUpdate()
         {
-            if (System.Buffers.VideoUpdated)
-            {
-                Texture.LoadRawTextureData(System.Buffers.VideoBuffer);
-                Texture.Apply();
-                System.Buffers.VideoUpdated = false;
-            }
+            var index = 0;
+            var buffer = System.Buffers;
+            if (!buffer.VideoUpdated) return;
+            Texture.LoadRawTextureData(buffer.VideoBuffer);
+            Texture.Apply();
+            buffer.VideoUpdated = false;
         }
 
         private void OnInputUpdate()
@@ -73,16 +73,20 @@ namespace UnitySnes
 
         private void TurnOn()
         {
-            if (_system != null)
-                return;
-            _system = new System();
+            if (_system != null) return;
+            var buffers = new Buffers(UnityEngine.SystemInfo.SupportsTextureFormat(TextureFormat.RGB565));
+            _system = new System(buffers);
             _system.On(Rom.bytes);
-
+            
             var w = Convert.ToInt32(System.SystemAvInfo.geometry.base_width);
             var h = Convert.ToInt32(System.SystemAvInfo.geometry.base_height);
-            Texture = new Texture2D(w, h, TextureFormat.RGB565, false) {filterMode = FilterMode.Point};
+            Texture =
+                new Texture2D(w, h, buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGB24, false)
+                {
+                    filterMode = FilterMode.Point
+                };
             Display.material.mainTexture = Texture;
-            AudioSource.clip = AudioClip.Create(name, System.Buffers.AudioBufferSize / 2, 2, 44100, true, OnAudioRead);
+            AudioSource.clip = AudioClip.Create(name, buffers.AudioBufferSize / 2, 2, 44100, true, OnAudioRead);
             AudioSource.playOnAwake = false;
             AudioSource.spatialBlend = 0;
             AudioSource.loop = true;
@@ -90,8 +94,7 @@ namespace UnitySnes
 
         private void TurnOff()
         {
-            if (_system == null)
-                return;
+            if (_system == null) return;
             _system.Off();
 
             AudioSource.Stop();
@@ -103,11 +106,6 @@ namespace UnitySnes
         private void OnDisable()
         {
             TurnOff();
-        }
-        
-        public bool IsTurnedOn
-        {
-            get { return _system != null; }
         }
     }
 }
