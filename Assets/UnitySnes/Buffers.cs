@@ -4,6 +4,7 @@ namespace UnitySnes
 {
     public class Buffers : IDisposable
     {
+        public float[] AudioBufferFlush;
         public float[] AudioBuffer;
         public int AudioPosition;
         public int AudioBufferSize;
@@ -13,9 +14,10 @@ namespace UnitySnes
         public int VideoLineBytes;
         public bool VideoUpdated;
         public short[] InputBuffer;
-        
+            
         public Buffers(bool videoSupport16Bit)
         {
+            AudioBufferFlush = null;
             AudioBufferSize = 0;
             AudioBuffer = null;
             AudioPosition = 0;
@@ -33,6 +35,7 @@ namespace UnitySnes
             var h = Convert.ToInt32(info.geometry.base_height);
             
             AudioBufferSize = 4096;
+            AudioBufferFlush = new float[AudioBufferSize];
             AudioBuffer = new float[AudioBufferSize];
             VideoLineBytes = (VideoSupport16Bit ? 2 : 3) * w;
             VideoBuffer = new byte[VideoLineBytes * h];
@@ -40,6 +43,7 @@ namespace UnitySnes
 
         public void Dispose()
         {
+            AudioBufferFlush = null;
             AudioBuffer = null;
             VideoBuffer = null;
             InputBuffer = null;

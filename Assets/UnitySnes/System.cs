@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using AOT;
+using UnityEngine;
 
 namespace UnitySnes
 {
@@ -18,6 +19,7 @@ namespace UnitySnes
         private Bridges.RetroAudioSampleBatchDelegate _audioSampleBatch;
         private Bridges.RetroInputPollDelegate _inputPoll;
         private Bridges.RetroInputStateDelegate _inputState;
+        private Bridges.RetroControllerPortDevideDelegate _controllerPortDevide;
 
         public System(Buffers buffers)
         {
@@ -34,6 +36,21 @@ namespace UnitySnes
         {
             Bridges.retro_run();
         }
+
+        public void Reset()
+        {
+            Bridges.retro_reset();
+        }
+
+        public void SaveState()
+        {
+            
+        }
+
+        public void LoadState()
+        {
+            
+        }
         
         public void Off()
         {
@@ -49,6 +66,7 @@ namespace UnitySnes
             _audioSampleBatch = RetroAudioSampleBatch;
             _inputPoll = RetroInputPoll;
             _inputState = RetroInputState;
+            _controllerPortDevide = RetroControllerPortDevide;
             
             SystemInfo = new SystemInfo();
             Bridges.retro_get_system_info(ref SystemInfo);
@@ -58,7 +76,27 @@ namespace UnitySnes
             Bridges.retro_set_audio_sample_batch(_audioSampleBatch);
             Bridges.retro_set_input_poll(_inputPoll);
             Bridges.retro_set_input_state(_inputState);
+            Bridges.retro_set_controller_port_device(_controllerPortDevide);
             Bridges.retro_init();
+        }
+        
+        private unsafe void LoadGame(byte[] bytes)
+        {
+            var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
+            Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
+
+            GameInfo = new GameInfo
+            {
+                path = (char*) Marshal.StringToHGlobalUni(Path.GetTempFileName()).ToPointer(),
+                size = (uint) bytes.Length,
+                data = arrayPointer.ToPointer()
+            };
+
+            if (!Bridges.retro_load_game(ref GameInfo))
+                throw new ArgumentException();
+            SystemAvInfo = new SystemAvInfo();
+            Bridges.retro_get_system_av_info(ref SystemAvInfo);
+            Buffers.SetSystemAvInfo(SystemAvInfo);
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]
@@ -160,16 +198,25 @@ namespace UnitySnes
             const int offset = sizeof(short);
             for (var i = 0; i < frames; i++)
             {
-                var chunk = Marshal.ReadInt16((IntPtr) data);
+                Buffers.AudioBuffer[Buffers.AudioPosition++] = Marshal.ReadInt16((IntPtr) data) / 32768f;
                 data += offset;
-                Buffers.AudioBuffer[Buffers.AudioPosition++] = chunk / 32768f;
-
+                
                 if (Buffers.AudioPosition >= Buffers.AudioBufferSize - 1)
                 {
                     Buffers.AudioUpdated = true;
                     Buffers.AudioPosition = 0;
+                    
+                    var tmp = Buffers.AudioBuffer;
+                    Buffers.AudioBuffer = Buffers.AudioBufferFlush;
+                    Buffers.AudioBufferFlush = tmp;
                 }
             }
+        }
+        
+        [MonoPInvokeCallback(typeof(Bridges.RetroControllerPortDevideDelegate))]
+        private static void RetroControllerPortDevide(uint port, uint device)
+        {
+            // Unused
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroInputPollDelegate))]
@@ -256,25 +303,6 @@ namespace UnitySnes
                         break;
                 }
             }
-        }
-
-        private unsafe void LoadGame(byte[] bytes)
-        {
-            var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
-            Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
-
-            GameInfo = new GameInfo
-            {
-                path = (char*) Marshal.StringToHGlobalUni(Path.GetTempFileName()).ToPointer(),
-                size = (uint) bytes.Length,
-                data = arrayPointer.ToPointer()
-            };
-
-            if (!Bridges.retro_load_game(ref GameInfo))
-                throw new ArgumentException();
-            SystemAvInfo = new SystemAvInfo();
-            Bridges.retro_get_system_av_info(ref SystemAvInfo);
-            Buffers.SetSystemAvInfo(SystemAvInfo);
         }
     }
 }

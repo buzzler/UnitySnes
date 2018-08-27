@@ -35,7 +35,7 @@ namespace UnitySnes
 
         private void OnAudioRead(float[] sampleData)
         {
-            Array.Copy(System.Buffers.AudioBuffer, sampleData, sampleData.Length);
+            Array.Copy(System.Buffers.AudioBufferFlush, sampleData, sampleData.Length);
         }
 
         private void OnVideoUpdate()

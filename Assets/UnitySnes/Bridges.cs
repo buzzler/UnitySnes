@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace UnitySnes
 {
@@ -41,6 +42,9 @@ namespace UnitySnes
         [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_set_environment")]
         public static extern bool retro_set_environment(RetroEnvironmentDelegate r);
 
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_set_controller_port_device")]
+        public static extern void retro_set_controller_port_device(RetroControllerPortDevideDelegate r);
+
         [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_run")]
         public static extern void retro_run();
 
@@ -49,6 +53,24 @@ namespace UnitySnes
 
         [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_unload_game")]
         public static extern void retro_unload_game();
+            
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_reset")]
+        public static extern void retro_reset();
+            
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_serialize_size")]
+        public static extern uint retro_serialize_size();
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_serialize")]
+        public static extern bool retro_serialize(IntPtr data, uint size);
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_unserialize")]
+        public static extern bool retro_unserialize(IntPtr data, uint size);
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_reset")]
+        public static extern void retro_cheat_reset();
+            
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_set")]
+        public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
 #elif UNITY_ANDROID
         private const string CoreName = "snes9x2010_libretro";
         
@@ -86,6 +108,9 @@ namespace UnitySnes
         [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_set_environment")]
         public static extern bool retro_set_environment(RetroEnvironmentDelegate r);
 
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_set_environment")]
+        public static extern void retro_set_controller_port_device(RetroControllerPortDevideDelegate r);
+        
         [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_run")]
         public static extern void retro_run();
 
@@ -94,6 +119,24 @@ namespace UnitySnes
 
         [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_unload_game")]
         public static extern void retro_unload_game();
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_reset")]
+        public static extern void retro_reset();
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_serialize_size")]
+        public static extern uint retro_serialize_size();
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_serialize")]
+        public static extern bool retro_serialize(IntPtr data, uint size);
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_unserialize")]
+        public static extern bool retro_unserialize(IntPtr data, uint size);
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_reset")]
+        public static extern void retro_cheat_reset();
+            
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_set")]
+        public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
 #elif UNITY_IOS
         [DllImport ("__Internal")]
         public	static extern int retro_api_version();
@@ -129,6 +172,9 @@ namespace UnitySnes
         public static extern bool retro_set_environment(RetroEnvironmentDelegate r);
         
         [DllImport ("__Internal")]
+        public static extern void retro_set_controller_port_device(RetroControllerPortDevideDelegate r);
+        
+        [DllImport ("__Internal")]
         public static extern void retro_run();
         
         [DllImport ("__Internal")]
@@ -136,6 +182,24 @@ namespace UnitySnes
         
         [DllImport ("__Internal")]
         public static extern void retro_unload_game();
+        
+        [DllImport ("__Internal")]
+        public static extern void retro_reset();
+        
+        [DllImport ("__Internal")]
+        public static extern uint retro_serialize_size();
+        
+        [DllImport ("__Internal")]
+        public static extern bool retro_serialize(IntPtr data, uint size);
+        
+        [DllImport ("__Internal")]
+        public static extern bool retro_unserialize(IntPtr data, uint size);
+        
+        [DllImport ("__Internal")]
+        public static extern void retro_cheat_reset();
+            
+        [DllImport ("__Internal")]
+        public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
 #endif
 
         //typedef void (*retro_video_refresh_t)(const void *data, unsigned width, unsigned height, size_t pitch);
@@ -155,5 +219,8 @@ namespace UnitySnes
 
         //typedef bool (*retro_environment_t)(unsigned cmd, void *data);
         public delegate bool RetroEnvironmentDelegate(uint cmd, void* data);
+            
+        //typedef void retro_controller_port_device(unsigned port, unsigned device);
+        public delegate void RetroControllerPortDevideDelegate(uint port, uint device);
     }
 }
