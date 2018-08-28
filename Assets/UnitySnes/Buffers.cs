@@ -14,6 +14,8 @@ namespace UnitySnes
         public int VideoLineBytes;
         public bool VideoUpdated;
         public short[] InputBuffer;
+        public byte[] StateBuffer;
+        public uint StateBufferSize;
             
         public Buffers(bool videoSupport16Bit)
         {
@@ -27,6 +29,7 @@ namespace UnitySnes
             VideoBuffer = null;
             VideoUpdated = false;
             InputBuffer = new short[16];
+            StateBuffer = null;
         }
 
         public void SetSystemAvInfo(SystemAvInfo info)
@@ -39,6 +42,12 @@ namespace UnitySnes
             AudioBuffer = new float[AudioBufferSize];
             VideoLineBytes = (VideoSupport16Bit ? 2 : 3) * w;
             VideoBuffer = new byte[VideoLineBytes * h];
+        }
+
+        public void SetStateSize(uint size)
+        {
+            StateBufferSize = size;
+            StateBuffer = new byte[StateBufferSize];
         }
 
         public void Dispose()

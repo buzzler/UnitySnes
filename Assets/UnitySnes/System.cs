@@ -42,14 +42,20 @@ namespace UnitySnes
             Bridges.retro_reset();
         }
 
-        public void SaveState()
+        public void SaveState(string filepath)
         {
-            
+            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
+            Bridges.retro_serialize(ptr, Buffers.StateBufferSize);
+            using (var file = File.OpenWrite(filepath))
+                file.Write(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
         }
 
-        public void LoadState()
+        public void LoadState(string filepath)
         {
-            
+            using (var file = File.OpenRead(filepath))
+                file.Read(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
+            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
+            Bridges.retro_unserialize(ptr, Buffers.StateBufferSize);
         }
         
         public void Off()
@@ -97,6 +103,7 @@ namespace UnitySnes
             SystemAvInfo = new SystemAvInfo();
             Bridges.retro_get_system_av_info(ref SystemAvInfo);
             Buffers.SetSystemAvInfo(SystemAvInfo);
+            Buffers.SetStateSize(Bridges.retro_serialize_size());
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]
