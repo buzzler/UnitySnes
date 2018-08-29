@@ -3,23 +3,22 @@ using UnityEngine;
 
 namespace UnitySnes
 {
-    public class SnesConsole : MonoBehaviour
+    public class Frontend : MonoBehaviour
     {
         public TextAsset Rom;
         public Renderer Display;
         public AudioSource AudioSource;
         public Texture2D Texture;
-        private System _system;
+        private Backend _backend;
         
         private void Start()
         {
             Application.targetFrameRate = 60;
-            TurnOn();
         }
 
         private void Update()
         {
-            _system.Loop();
+            _backend.Loop();
             OnInputUpdate();
             OnAudioUpdate();
             OnVideoUpdate();
@@ -27,7 +26,7 @@ namespace UnitySnes
 
         private void OnAudioUpdate()
         {
-            var buffer = System.Buffers;
+            var buffer = Backend.Buffers;
             if (!buffer.AudioUpdated) return;
             AudioSource.Play();
             buffer.AudioUpdated = false;
@@ -35,13 +34,12 @@ namespace UnitySnes
 
         private void OnAudioRead(float[] sampleData)
         {
-            Array.Copy(System.Buffers.AudioBufferFlush, sampleData, sampleData.Length);
+            Array.Copy(Backend.Buffers.AudioBufferFlush, sampleData, sampleData.Length);
         }
 
         private void OnVideoUpdate()
         {
-            var index = 0;
-            var buffer = System.Buffers;
+            var buffer = Backend.Buffers;
             if (!buffer.VideoUpdated) return;
             Texture.LoadRawTextureData(buffer.VideoBuffer);
             Texture.Apply();
@@ -51,7 +49,7 @@ namespace UnitySnes
         private void OnInputUpdate()
         {
 #if UNITY_EDITOR
-            var inputBuffer = System.Buffers.InputBuffer;
+            var inputBuffer = Backend.Buffers.InputBuffer;
             inputBuffer[0] = (short) (Input.GetKey(KeyCode.Z) || Input.GetButton("B") ? 1 : 0);
             inputBuffer[1] = (short) (Input.GetKey(KeyCode.A) || Input.GetButton("Y") ? 1 : 0);
             inputBuffer[2] = (short) (Input.GetKey(KeyCode.Space) || Input.GetButton("SELECT") ? 1 : 0);
@@ -73,13 +71,13 @@ namespace UnitySnes
 
         private void TurnOn()
         {
-            if (_system != null) return;
+            if (_backend != null) return;
             var buffers = new Buffers(UnityEngine.SystemInfo.SupportsTextureFormat(TextureFormat.RGB565));
-            _system = new System(buffers);
-            _system.On(Rom.bytes);
+            _backend = new Backend(buffers);
+            _backend.On(Rom.bytes);
             
-            var w = Convert.ToInt32(System.SystemAvInfo.geometry.base_width);
-            var h = Convert.ToInt32(System.SystemAvInfo.geometry.base_height);
+            var w = Convert.ToInt32(Backend.SystemAvInfo.geometry.base_width);
+            var h = Convert.ToInt32(Backend.SystemAvInfo.geometry.base_height);
             Texture =
                 new Texture2D(w, h, buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGB24, false)
                 {
@@ -94,13 +92,18 @@ namespace UnitySnes
 
         private void TurnOff()
         {
-            if (_system == null) return;
-            _system.Off();
+            if (_backend == null) return;
+            _backend.Off();
 
             AudioSource.Stop();
             AudioSource.clip = null;
             Display.material.mainTexture = null;
             Texture = null;
+        }
+
+        private void OnEnable()
+        {
+            TurnOn();
         }
 
         private void OnDisable()

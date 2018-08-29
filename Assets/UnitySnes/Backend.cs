@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace UnitySnes
 {
-    public class System
+    public class Backend
     {
         public static SystemInfo SystemInfo; // set by Init
         public static GameInfo GameInfo; // set by LoadGame
@@ -21,7 +21,7 @@ namespace UnitySnes
         private Bridges.RetroInputStateDelegate _inputState;
         private Bridges.RetroControllerPortDevideDelegate _controllerPortDevide;
 
-        public System(Buffers buffers)
+        public Backend(Buffers buffers)
         {
             Buffers = buffers;
         }
