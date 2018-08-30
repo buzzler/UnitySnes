@@ -222,5 +222,15 @@ namespace UnitySnes
             
         //typedef void retro_controller_port_device(unsigned port, unsigned device);
         public delegate void RetroControllerPortDevideDelegate(uint port, uint device);
+            
+        [DllImport("__Internal")]
+        private static extern void _setupExternalInput();
+            
+        public static void SetupExternalInput()
+        {
+#if UNITY_IOS
+            _setupExternalInput ();
+#endif
+        }
     }
 }

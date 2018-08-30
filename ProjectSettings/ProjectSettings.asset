@@ -789,7 +789,7 @@ PlayerSettings:
   scriptingDefineSymbols:
     1: 
     2: 
-    4: IMPROVE_VIDEO
+    4: 
     7: 
     14: MOBILE_INPUT
     15: CROSS_PLATFORM_INPUT;MOBILE_INPUT

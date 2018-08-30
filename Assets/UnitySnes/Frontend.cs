@@ -45,6 +45,64 @@ namespace UnitySnes
             Texture.Apply();
             buffer.VideoUpdated = false;
         }
+        
+        public void OnInputDetected(string receivedKeystroke)
+        {
+#if UNITY_IOS
+            var inputBuffer = Backend.Buffers.InputBuffer;
+            switch (receivedKeystroke)
+            {
+                case "K":
+                    inputBuffer[0] = 1; break;
+                case "P":
+                    inputBuffer[0] = 0; break;
+                case "I":
+                    inputBuffer[1] = 1; break;
+                case "M":
+                    inputBuffer[1] = 0; break;
+                case "Y":
+                    inputBuffer[2] = 1; break;
+                case "T":
+                    inputBuffer[2] = 0; break;
+                case "U":
+                    inputBuffer[3] = 1; break;
+                case "F":
+                    inputBuffer[3] = 0; break;
+                case "W":
+                    inputBuffer[4] = 1; break;
+                case "E":
+                    inputBuffer[4] = 0; break;
+                case "X":
+                    inputBuffer[5] = 1; break;
+                case "Z":
+                    inputBuffer[5] = 0; break;
+                case "A":
+                    inputBuffer[6] = 1; break;
+                case "Q":
+                    inputBuffer[6] = 0; break;
+                case "D":
+                    inputBuffer[7] = 1; break;
+                case "C":
+                    inputBuffer[7] = 0; break;
+                case "L":
+                    inputBuffer[8] = 1; break;
+                case "V":
+                    inputBuffer[8] = 0; break;
+                case "O":
+                    inputBuffer[9] = 1; break;
+                case "G":
+                    inputBuffer[9] = 0; break;
+                case "H":
+                    inputBuffer[10] = 1; break;
+                case "R":
+                    inputBuffer[10] = 0; break;
+                case "J":
+                    inputBuffer[11] = 1; break;
+                case "N":
+                    inputBuffer[11] = 0; break;
+            }
+#endif
+        }
 
         private void OnInputUpdate()
         {
@@ -88,6 +146,7 @@ namespace UnitySnes
             AudioSource.playOnAwake = false;
             AudioSource.spatialBlend = 0;
             AudioSource.loop = true;
+            Bridges.SetupExternalInput();
         }
 
         private void TurnOff()
