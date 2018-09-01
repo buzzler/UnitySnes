@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using AOT;
-using UnityEngine;
 
 namespace UnitySnes
 {
@@ -249,10 +248,12 @@ namespace UnitySnes
                 case Environment.RetroEnvironmentSetVariables:
                     break;
                 case Environment.RetroEnvironmentSetMessage:
+                    RetroEnvironmentSetSystemMessage((IntPtr) data);
                     break;
                 case Environment.RetroEnvironmentSetRotation:
                     break;
                 case Environment.RetroEnvironmentShutdown:
+                    RetroEnvironmentShutdown();
                     break;
                 case Environment.RetroEnvironmentSetPerformanceLevel:
                     break;
@@ -270,6 +271,19 @@ namespace UnitySnes
             }
 
             return true;
+        }
+
+        private static unsafe void RetroEnvironmentSetSystemMessage(IntPtr ptr)
+        {
+            var message = Marshal.PtrToStructure<SystemMessage>(ptr);
+            Buffers.SystemMessage = Marshal.PtrToStringAuto((IntPtr) message.message);
+            Buffers.SystemMessageFrames = message.frames;
+        }
+
+        private static void RetroEnvironmentShutdown()
+        {
+            Bridges.retro_unload_game();
+            Bridges.retro_deinit();
         }
 
         private static void RetroEnvironmentSetPixelFormat(PixelFormat pixelFormat)

@@ -16,6 +16,13 @@ namespace UnitySnes
         public Geometry geometry;
         public Timing timing;
     }
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct SystemMessage
+    {
+        public readonly char* message;
+        public readonly uint frames;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct GameInfo
@@ -69,5 +76,25 @@ namespace UnitySnes
         public const uint RetroEnvironmentSetPixelFormat = 10;
         public const uint RetroEnvironmentSetInputDescriptors = 11;
         public const uint RetroEnvironmentSetKeyboardCallback = 12;
+    }
+
+    public class SnesInput
+    {
+        public const int B = 0;
+        public const int Y = 1;
+        public const int Select = 2;
+        public const int Start = 3;
+        public const int Up = 4;
+        public const int Down = 5;
+        public const int Left = 6;
+        public const int Right = 7;
+        public const int A = 8;
+        public const int X = 9;
+        public const int L = 10;
+        public const int R = 11;
+        public const int L2 = 12;
+        public const int R2 = 13;
+        public const int L3 = 14;
+        public const int R3 = 15;
     }
 }

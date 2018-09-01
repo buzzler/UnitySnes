@@ -1,10 +1,10 @@
 ﻿using System;
-using UnityEngine;
 
 namespace UnitySnes
 {
     public class Buffers : IDisposable
     {
+        // required
         public float[] AudioBufferFlush;
         public float[] AudioBuffer;
         public int AudioPosition;
@@ -17,20 +17,29 @@ namespace UnitySnes
         public short[] InputBuffer;
         public byte[] StateBuffer;
         public uint StateBufferSize;
+        
+        // optional
+        public string SystemDirectory;
+        public string SystemMessage;
+        public uint SystemMessageFrames;
             
-        public Buffers(bool videoSupport16Bit)
+        public Buffers()
         {
             AudioBufferFlush = null;
             AudioBufferSize = 0;
             AudioBuffer = null;
             AudioPosition = 0;
             AudioUpdated = false;
-            VideoSupport16Bit = videoSupport16Bit;
+            VideoSupport16Bit = true;
             VideoLineBytes = 0;
             VideoBuffer = null;
             VideoUpdated = false;
             InputBuffer = new short[16];
             StateBuffer = null;
+            SystemDirectory = "";
+            SystemMessage = "";
+            SystemMessageFrames = 0;
+
         }
 
         public void SetSystemAvInfo(SystemAvInfo info)
@@ -57,6 +66,9 @@ namespace UnitySnes
             AudioBuffer = null;
             VideoBuffer = null;
             InputBuffer = null;
+
+            SystemDirectory = "";
+            SystemMessage = "";
         }
     }
 }

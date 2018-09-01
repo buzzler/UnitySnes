@@ -108,18 +108,18 @@ namespace UnitySnes
         {
 #if UNITY_EDITOR
             var inputBuffer = Backend.Buffers.InputBuffer;
-            inputBuffer[0] = (short) (Input.GetKey(KeyCode.Z) || Input.GetButton("B") ? 1 : 0);
-            inputBuffer[1] = (short) (Input.GetKey(KeyCode.A) || Input.GetButton("Y") ? 1 : 0);
-            inputBuffer[2] = (short) (Input.GetKey(KeyCode.Space) || Input.GetButton("SELECT") ? 1 : 0);
-            inputBuffer[3] = (short) (Input.GetKey(KeyCode.Return) || Input.GetButton("START") ? 1 : 0);
-            inputBuffer[4] = (short) (Input.GetKey(KeyCode.UpArrow) || Input.GetAxisRaw("DpadX") >= 1f ? 1 : 0);
-            inputBuffer[5] = (short) (Input.GetKey(KeyCode.DownArrow) || Input.GetAxisRaw("DpadX") <= -1f ? 1 : 0);
-            inputBuffer[6] = (short) (Input.GetKey(KeyCode.LeftArrow) || Input.GetAxisRaw("DpadY") <= -1f ? 1 : 0);
-            inputBuffer[7] = (short) (Input.GetKey(KeyCode.RightArrow) || Input.GetAxisRaw("DpadY") >= 1f ? 1 : 0);
-            inputBuffer[8] = (short) (Input.GetKey(KeyCode.X) || Input.GetButton("A") ? 1 : 0);
-            inputBuffer[9] = (short) (Input.GetKey(KeyCode.S) || Input.GetButton("X") ? 1 : 0);
-            inputBuffer[10] = (short) (Input.GetKey(KeyCode.Q) || Input.GetButton("L") ? 1 : 0);
-            inputBuffer[11] = (short) (Input.GetKey(KeyCode.W) || Input.GetButton("R") ? 1 : 0);
+            inputBuffer[0] = (short) (Input.GetKey(KeyCode.Z) ? 1 : 0);
+            inputBuffer[1] = (short) (Input.GetKey(KeyCode.A)? 1 : 0);
+            inputBuffer[2] = (short) (Input.GetKey(KeyCode.Space) ? 1 : 0);
+            inputBuffer[3] = (short) (Input.GetKey(KeyCode.Return) ? 1 : 0);
+            inputBuffer[4] = (short) (Input.GetKey(KeyCode.UpArrow) ? 1 : 0);
+            inputBuffer[5] = (short) (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
+            inputBuffer[6] = (short) (Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
+            inputBuffer[7] = (short) (Input.GetKey(KeyCode.RightArrow) ? 1 : 0);
+            inputBuffer[8] = (short) (Input.GetKey(KeyCode.X) ? 1 : 0);
+            inputBuffer[9] = (short) (Input.GetKey(KeyCode.S) ? 1 : 0);
+            inputBuffer[10] = (short) (Input.GetKey(KeyCode.Q) ? 1 : 0);
+            inputBuffer[11] = (short) (Input.GetKey(KeyCode.W) ? 1 : 0);
             inputBuffer[12] = (short) (Input.GetKey(KeyCode.E) ? 1 : 0);
             inputBuffer[13] = (short) (Input.GetKey(KeyCode.R) ? 1 : 0);
             inputBuffer[14] = (short) (Input.GetKey(KeyCode.T) ? 1 : 0);
@@ -130,7 +130,11 @@ namespace UnitySnes
         private void TurnOn()
         {
             if (_backend != null) return;
-            var buffers = new Buffers(UnityEngine.SystemInfo.SupportsTextureFormat(TextureFormat.RGB565));
+            var buffers = new Buffers()
+            {
+                VideoSupport16Bit = UnityEngine.SystemInfo.SupportsTextureFormat(TextureFormat.RGB565),
+                SystemDirectory = Application.persistentDataPath
+            };
             _backend = new Backend(buffers);
             _backend.On(Rom.bytes);
             
