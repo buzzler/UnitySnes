@@ -71,6 +71,12 @@ namespace UnitySnes
             
         [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_set")]
         public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
+
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_data")]
+        public static extern IntPtr retro_get_memory_data(uint type);
+
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_size")]
+        public static extern uint retro_get_memory_size(uint type);
 #elif UNITY_ANDROID
         private const string CoreName = "snes9x2010_libretro";
         
@@ -137,6 +143,12 @@ namespace UnitySnes
             
         [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_set")]
         public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
+        
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_data")]
+        public static extern IntPtr retro_get_memory_data(uint type);
+
+        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_size")]
+        public static extern uint retro_get_memory_size(uint type);
 #elif UNITY_IOS
         [DllImport ("__Internal")]
         public	static extern int retro_api_version();
@@ -200,6 +212,12 @@ namespace UnitySnes
             
         [DllImport ("__Internal")]
         public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
+        
+        [DllImport ("__Internal")]
+        public static extern IntPtr retro_get_memory_data(uint type);
+
+        [DllImport ("__Internal")]
+        public static extern uint retro_get_memory_size(uint type);
 #endif
 
         //typedef void (*retro_video_refresh_t)(const void *data, unsigned width, unsigned height, size_t pitch);

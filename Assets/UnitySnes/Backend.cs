@@ -41,6 +41,72 @@ namespace UnitySnes
             Bridges.retro_reset();
         }
 
+        public void SaveSram(string filepath)
+        {
+            SaveMemory(filepath, MemoryType.SaveRam);
+        }
+
+        public void LoadSram(string filepath)
+        {
+            LoadMemory(filepath, MemoryType.SaveRam);
+        }
+
+        public void SaveRtc(string filepath)
+        {
+            SaveMemory(filepath, MemoryType.Rtc);
+        }
+
+        public void LoadRtc(string filepath)
+        {
+            LoadMemory(filepath, MemoryType.Rtc);
+        }
+
+        public void SaveSystemRam(string filepath)
+        {
+            SaveMemory(filepath, MemoryType.SystemRam);
+        }
+
+        public void LoadSystemRam(string filepath)
+        {
+            LoadMemory(filepath, MemoryType.SystemRam);
+        }
+
+        public void SaveVideoRam(string filepath)
+        {
+            SaveMemory(filepath, MemoryType.VideoRam);
+        }
+
+        public void LoadVideoRam(string filepath)
+        {
+            LoadMemory(filepath, MemoryType.VideoRam);
+        }
+
+        private void SaveMemory(string filepath, uint memoryType)
+        {
+            var size = Bridges.retro_get_memory_size(memoryType);
+            var ptr = Bridges.retro_get_memory_data(memoryType);
+            if (size <= 0)
+                return;
+            
+            var bytes = new byte[size];
+            Marshal.Copy(ptr, bytes, 0, (int) size);
+            using (var file = File.OpenWrite(filepath))
+                file.Write(bytes, 0, (int) size);
+        }
+
+        private void LoadMemory(string filepath, uint memoryType)
+        {
+            var size = Bridges.retro_get_memory_size(memoryType);
+            var ptr = Bridges.retro_get_memory_data(memoryType);
+            if (size <= 0)
+                return;
+
+            var bytes = new byte[size];
+            using (var file = File.OpenRead(filepath))
+                file.Read(bytes, 0, (int) size);
+            Marshal.Copy(bytes, 0, ptr, (int) size);
+        }
+
         public void SaveState(string filepath)
         {
             var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);

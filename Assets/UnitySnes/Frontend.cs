@@ -53,53 +53,53 @@ namespace UnitySnes
             switch (receivedKeystroke)
             {
                 case "K":
-                    inputBuffer[0] = 1; break;
+                    inputBuffer[SnesInput.B] = 1; break;
                 case "P":
-                    inputBuffer[0] = 0; break;
+                    inputBuffer[SnesInput.B] = 0; break;
                 case "I":
-                    inputBuffer[1] = 1; break;
+                    inputBuffer[SnesInput.Y] = 1; break;
                 case "M":
-                    inputBuffer[1] = 0; break;
+                    inputBuffer[SnesInput.Y] = 0; break;
                 case "Y":
-                    inputBuffer[2] = 1; break;
+                    inputBuffer[SnesInput.Select] = 1; break;
                 case "T":
-                    inputBuffer[2] = 0; break;
+                    inputBuffer[SnesInput.Select] = 0; break;
                 case "U":
-                    inputBuffer[3] = 1; break;
+                    inputBuffer[SnesInput.Start] = 1; break;
                 case "F":
-                    inputBuffer[3] = 0; break;
+                    inputBuffer[SnesInput.Start] = 0; break;
                 case "W":
-                    inputBuffer[4] = 1; break;
+                    inputBuffer[SnesInput.Up] = 1; break;
                 case "E":
-                    inputBuffer[4] = 0; break;
+                    inputBuffer[SnesInput.Up] = 0; break;
                 case "X":
-                    inputBuffer[5] = 1; break;
+                    inputBuffer[SnesInput.Down] = 1; break;
                 case "Z":
-                    inputBuffer[5] = 0; break;
+                    inputBuffer[SnesInput.Down] = 0; break;
                 case "A":
-                    inputBuffer[6] = 1; break;
+                    inputBuffer[SnesInput.Left] = 1; break;
                 case "Q":
-                    inputBuffer[6] = 0; break;
+                    inputBuffer[SnesInput.Left] = 0; break;
                 case "D":
-                    inputBuffer[7] = 1; break;
+                    inputBuffer[SnesInput.Right] = 1; break;
                 case "C":
-                    inputBuffer[7] = 0; break;
+                    inputBuffer[SnesInput.Right] = 0; break;
                 case "L":
-                    inputBuffer[8] = 1; break;
+                    inputBuffer[SnesInput.A] = 1; break;
                 case "V":
-                    inputBuffer[8] = 0; break;
+                    inputBuffer[SnesInput.A] = 0; break;
                 case "O":
-                    inputBuffer[9] = 1; break;
+                    inputBuffer[SnesInput.X] = 1; break;
                 case "G":
-                    inputBuffer[9] = 0; break;
+                    inputBuffer[SnesInput.X] = 0; break;
                 case "H":
-                    inputBuffer[10] = 1; break;
+                    inputBuffer[SnesInput.L] = 1; break;
                 case "R":
-                    inputBuffer[10] = 0; break;
+                    inputBuffer[SnesInput.L] = 0; break;
                 case "J":
-                    inputBuffer[11] = 1; break;
+                    inputBuffer[SnesInput.R] = 1; break;
                 case "N":
-                    inputBuffer[11] = 0; break;
+                    inputBuffer[SnesInput.R] = 0; break;
             }
 #endif
         }
@@ -108,22 +108,22 @@ namespace UnitySnes
         {
 #if UNITY_EDITOR
             var inputBuffer = Backend.Buffers.InputBuffer;
-            inputBuffer[0] = (short) (Input.GetKey(KeyCode.Z) ? 1 : 0);
-            inputBuffer[1] = (short) (Input.GetKey(KeyCode.A)? 1 : 0);
-            inputBuffer[2] = (short) (Input.GetKey(KeyCode.Space) ? 1 : 0);
-            inputBuffer[3] = (short) (Input.GetKey(KeyCode.Return) ? 1 : 0);
-            inputBuffer[4] = (short) (Input.GetKey(KeyCode.UpArrow) ? 1 : 0);
-            inputBuffer[5] = (short) (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
-            inputBuffer[6] = (short) (Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
-            inputBuffer[7] = (short) (Input.GetKey(KeyCode.RightArrow) ? 1 : 0);
-            inputBuffer[8] = (short) (Input.GetKey(KeyCode.X) ? 1 : 0);
-            inputBuffer[9] = (short) (Input.GetKey(KeyCode.S) ? 1 : 0);
-            inputBuffer[10] = (short) (Input.GetKey(KeyCode.Q) ? 1 : 0);
-            inputBuffer[11] = (short) (Input.GetKey(KeyCode.W) ? 1 : 0);
-            inputBuffer[12] = (short) (Input.GetKey(KeyCode.E) ? 1 : 0);
-            inputBuffer[13] = (short) (Input.GetKey(KeyCode.R) ? 1 : 0);
-            inputBuffer[14] = (short) (Input.GetKey(KeyCode.T) ? 1 : 0);
-            inputBuffer[15] = (short) (Input.GetKey(KeyCode.Y) ? 1 : 0);
+            inputBuffer[SnesInput.B] = (short) (Input.GetKey(KeyCode.Z) ? 1 : 0);
+            inputBuffer[SnesInput.Y] = (short) (Input.GetKey(KeyCode.A)? 1 : 0);
+            inputBuffer[SnesInput.Select] = (short) (Input.GetKey(KeyCode.Space) ? 1 : 0);
+            inputBuffer[SnesInput.Start] = (short) (Input.GetKey(KeyCode.Return) ? 1 : 0);
+            inputBuffer[SnesInput.Up] = (short) (Input.GetKey(KeyCode.UpArrow) ? 1 : 0);
+            inputBuffer[SnesInput.Down] = (short) (Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
+            inputBuffer[SnesInput.Left] = (short) (Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
+            inputBuffer[SnesInput.Right] = (short) (Input.GetKey(KeyCode.RightArrow) ? 1 : 0);
+            inputBuffer[SnesInput.A] = (short) (Input.GetKey(KeyCode.X) ? 1 : 0);
+            inputBuffer[SnesInput.X] = (short) (Input.GetKey(KeyCode.S) ? 1 : 0);
+            inputBuffer[SnesInput.L] = (short) (Input.GetKey(KeyCode.Q) ? 1 : 0);
+            inputBuffer[SnesInput.R] = (short) (Input.GetKey(KeyCode.W) ? 1 : 0);
+            inputBuffer[SnesInput.L2] = (short) (Input.GetKey(KeyCode.E) ? 1 : 0);
+            inputBuffer[SnesInput.R2] = (short) (Input.GetKey(KeyCode.R) ? 1 : 0);
+            inputBuffer[SnesInput.L3] = (short) (Input.GetKey(KeyCode.T) ? 1 : 0);
+            inputBuffer[SnesInput.R3] = (short) (Input.GetKey(KeyCode.Y) ? 1 : 0);
 #endif
         }
 

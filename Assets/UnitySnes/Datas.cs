@@ -62,7 +62,7 @@ namespace UnitySnes
         [MarshalAs(UnmanagedType.U1)] public bool block_extract;
     }
 
-    public class Environment
+    public static class Environment
     {
         public const uint RetroEnvironmentSetRotation = 1;
         public const uint RetroEnvironmentGetOverscan = 2;
@@ -78,7 +78,7 @@ namespace UnitySnes
         public const uint RetroEnvironmentSetKeyboardCallback = 12;
     }
 
-    public class SnesInput
+    public static class SnesInput
     {
         public const int B = 0;
         public const int Y = 1;
@@ -96,5 +96,13 @@ namespace UnitySnes
         public const int R2 = 13;
         public const int L3 = 14;
         public const int R3 = 15;
+    }
+
+    public static class MemoryType
+    {
+        public const uint SaveRam = 0;
+        public const uint Rtc = 1;
+        public const uint SystemRam = 2;
+        public const uint VideoRam = 3;
     }
 }
