@@ -1,15 +1,19 @@
 ﻿using System;
+using System.IO;
 using UnityEngine;
 
 namespace UnitySnes
 {
     public class Frontend : MonoBehaviour
     {
-        public TextAsset Rom;
         public Renderer Display;
         public AudioSource AudioSource;
         public Texture2D Texture;
+        
         private Backend _backend;
+        private const string RomFilename = "game.bytes";
+        private const string SramFilename = "game.srm";
+        private const string RtcFilename = "game.rtc";
         
         private void Start()
         {
@@ -52,21 +56,21 @@ namespace UnitySnes
             var inputBuffer = Backend.Buffers.InputBuffer;
             switch (receivedKeystroke)
             {
-                case "K":
+                case "H":
                     inputBuffer[SnesInput.B] = 1; break;
-                case "P":
+                case "R":
                     inputBuffer[SnesInput.B] = 0; break;
-                case "I":
-                    inputBuffer[SnesInput.Y] = 1; break;
-                case "M":
-                    inputBuffer[SnesInput.Y] = 0; break;
                 case "Y":
-                    inputBuffer[SnesInput.Select] = 1; break;
+                    inputBuffer[SnesInput.Y] = 1; break;
                 case "T":
+                    inputBuffer[SnesInput.Y] = 0; break;
+                case "L":
+                    inputBuffer[SnesInput.Select] = 1; break;
+                case "V":
                     inputBuffer[SnesInput.Select] = 0; break;
-                case "U":
+                case "O":
                     inputBuffer[SnesInput.Start] = 1; break;
-                case "F":
+                case "G":
                     inputBuffer[SnesInput.Start] = 0; break;
                 case "W":
                     inputBuffer[SnesInput.Up] = 1; break;
@@ -84,21 +88,21 @@ namespace UnitySnes
                     inputBuffer[SnesInput.Right] = 1; break;
                 case "C":
                     inputBuffer[SnesInput.Right] = 0; break;
-                case "L":
+                case "U":
                     inputBuffer[SnesInput.A] = 1; break;
-                case "V":
+                case "F":
                     inputBuffer[SnesInput.A] = 0; break;
-                case "O":
-                    inputBuffer[SnesInput.X] = 1; break;
-                case "G":
-                    inputBuffer[SnesInput.X] = 0; break;
-                case "H":
-                    inputBuffer[SnesInput.L] = 1; break;
-                case "R":
-                    inputBuffer[SnesInput.L] = 0; break;
                 case "J":
-                    inputBuffer[SnesInput.R] = 1; break;
+                    inputBuffer[SnesInput.X] = 1; break;
                 case "N":
+                    inputBuffer[SnesInput.X] = 0; break;
+                case "K":
+                    inputBuffer[SnesInput.L] = 1; break;
+                case "P":
+                    inputBuffer[SnesInput.L] = 0; break;
+                case "I":
+                    inputBuffer[SnesInput.R] = 1; break;
+                case "M":
                     inputBuffer[SnesInput.R] = 0; break;
             }
 #endif
@@ -136,7 +140,26 @@ namespace UnitySnes
                 SystemDirectory = Application.persistentDataPath
             };
             _backend = new Backend(buffers);
-            _backend.On(Rom.bytes);
+
+            var romfilepath = Path.Combine(Application.persistentDataPath, RomFilename);
+            if (File.Exists(romfilepath))
+            {
+                _backend.On(File.ReadAllBytes(romfilepath));
+            }
+            else
+            {
+                romfilepath = Path.Combine(Application.streamingAssetsPath, RomFilename);
+                if (File.Exists(romfilepath))
+                    _backend.On(File.ReadAllBytes(romfilepath));
+                else
+                    throw new ArgumentException();
+            }
+            var sramfilepath = Path.Combine(Application.persistentDataPath, SramFilename);
+            if (File.Exists(sramfilepath))
+                _backend.LoadSram(sramfilepath);
+            var rtcfilepath = Path.Combine(Application.persistentDataPath, RtcFilename);
+            if (File.Exists(rtcfilepath))
+                _backend.LoadRtc(rtcfilepath);
             
             var w = Convert.ToInt32(Backend.SystemAvInfo.geometry.base_width);
             var h = Convert.ToInt32(Backend.SystemAvInfo.geometry.base_height);
@@ -156,6 +179,7 @@ namespace UnitySnes
         private void TurnOff()
         {
             if (_backend == null) return;
+            OnApplicationQuit();
             _backend.Off();
 
             AudioSource.Stop();
@@ -172,6 +196,19 @@ namespace UnitySnes
         private void OnDisable()
         {
             TurnOff();
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (!pauseStatus) return;
+            OnApplicationQuit();
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (_backend == null) return;
+            _backend.SaveSram(Path.Combine(Application.persistentDataPath, SramFilename));
+            _backend.SaveRtc(Path.Combine(Application.persistentDataPath, RtcFilename));
         }
     }
 }
