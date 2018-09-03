@@ -178,7 +178,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03e633711ae1f4eeca3fb765bc5ee3e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Rom: {fileID: 4900000, guid: 0b9457570fe9246f49e67507ef48fcab, type: 3}
   Display: {fileID: 635089074}
   AudioSource: {fileID: 635089079}
   Texture: {fileID: 0}
@@ -197,7 +196,7 @@ Transform:
   m_GameObject: {fileID: 635089073}
   m_LocalRotation: {x: -0, y: -0, z: 1, w: -0.00000016292068}
   m_LocalPosition: {x: 0, y: 0, z: 5}
-  m_LocalScale: {x: 8, y: 6, z: 1}
+  m_LocalScale: {x: 8, y: 6.857143, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1

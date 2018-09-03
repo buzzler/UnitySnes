@@ -160,14 +160,14 @@ namespace UnitySnes
             var rtcfilepath = Path.Combine(Application.persistentDataPath, RtcFilename);
             if (File.Exists(rtcfilepath))
                 _backend.LoadRtc(rtcfilepath);
+
+            Texture = new Texture2D(buffers.VideoUnitSize, buffers.VideoUnitSize,
+                buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGBA32,
+                false)
+            {
+                filterMode = FilterMode.Point
+            };
             
-            var w = Convert.ToInt32(Backend.SystemAvInfo.geometry.base_width);
-            var h = Convert.ToInt32(Backend.SystemAvInfo.geometry.base_height);
-            Texture =
-                new Texture2D(w, h, buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGB24, false)
-                {
-                    filterMode = FilterMode.Point
-                };
             Display.material.mainTexture = Texture;
             AudioSource.clip = AudioClip.Create(name, buffers.AudioBufferSize / 2, 2, 44100, true, OnAudioRead);
             AudioSource.playOnAwake = false;

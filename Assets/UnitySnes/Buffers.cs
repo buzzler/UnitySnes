@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace UnitySnes
 {
@@ -11,6 +12,9 @@ namespace UnitySnes
         public int AudioBufferSize;
         public bool AudioUpdated;
         public byte[] VideoBuffer;
+        public int VideoWidth;
+        public int VideoHeight;
+        public int VideoUnitSize;
         public bool VideoSupport16Bit;
         public int VideoLineBytes;
         public bool VideoUpdated;
@@ -33,6 +37,9 @@ namespace UnitySnes
             VideoSupport16Bit = true;
             VideoLineBytes = 0;
             VideoBuffer = null;
+            VideoWidth = 256;
+            VideoHeight = 224;
+            VideoUnitSize = 0;
             VideoUpdated = false;
             InputBuffer = new short[16];
             StateBuffer = null;
@@ -44,14 +51,15 @@ namespace UnitySnes
 
         public void SetSystemAvInfo(SystemAvInfo info)
         {
-            var w = Convert.ToInt32(info.geometry.base_width);
-            var h = Convert.ToInt32(info.geometry.base_height);
+            VideoWidth = Convert.ToInt32(info.geometry.base_width);
+            VideoHeight = Convert.ToInt32(info.geometry.base_height);
             
             AudioBufferSize = 4096;
             AudioBufferFlush = new float[AudioBufferSize];
             AudioBuffer = new float[AudioBufferSize];
-            VideoLineBytes = (VideoSupport16Bit ? 2 : 3) * w;
-            VideoBuffer = new byte[VideoLineBytes * h];
+            VideoLineBytes = (VideoSupport16Bit ? 2 : 4) * VideoWidth;
+            VideoUnitSize = VideoWidth;
+            VideoBuffer = new byte[VideoLineBytes * VideoUnitSize];
         }
 
         public void SetStateSize(uint size)

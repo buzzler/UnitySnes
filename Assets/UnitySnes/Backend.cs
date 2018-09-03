@@ -181,7 +181,7 @@ namespace UnitySnes
         private static void Argb1555ToRgb565(IntPtr pixels, uint width, uint height, uint pitch)
         {
             var videoBuffer = Buffers.VideoBuffer;
-            var index = 0;
+            var index = (int) ((Buffers.VideoUnitSize - height) / 2f) * Buffers.VideoLineBytes;
             for (var y = 0; y < height; y++)
             {
                 for (var x = 0; x < width; x++)
@@ -198,7 +198,7 @@ namespace UnitySnes
         private static void Argb32ToRgb565(IntPtr pixels, uint width, uint height, uint pitch)
         {
             var videoBuffer = Buffers.VideoBuffer;
-            var index = 0;
+            var index = (int) ((Buffers.VideoUnitSize - height) / 2f) * Buffers.VideoLineBytes;
             for (var y = 0; y < height; y++)
             {
                 for (var x = 0; x < width; x++)
@@ -219,25 +219,26 @@ namespace UnitySnes
         {
             var videoBuffer = Buffers.VideoBuffer;
             var videoLineByte = Buffers.VideoLineBytes;
+            var videoOffset = (int) ((Buffers.VideoUnitSize - height) / 2f) * videoLineByte;
             for (var y = 0; y < height; y++)
             {
-                Marshal.Copy(pixels, videoBuffer, y * videoLineByte, videoLineByte);
+                Marshal.Copy(pixels, videoBuffer, videoOffset + y * videoLineByte, videoLineByte);
                 pixels = new IntPtr(pixels.ToInt64() + pitch);
             }
         }
 
-        private static void Argb1555ToRgb24(IntPtr pixels, uint width, uint height, uint pitch)
+        private static void Argb1555ToRgb32(IntPtr pixels, uint width, uint height, uint pitch)
         {
         }
 
-        private static void Argb32ToRgb24(IntPtr pixels, uint width, uint height, uint pitch)
+        private static void Argb32ToRgb32(IntPtr pixels, uint width, uint height, uint pitch)
         {
         }
 
-        private static void Rgb565ToRgb24(IntPtr pixels, uint width, uint height, uint pitch)
+        private static void Rgb565ToRgb32(IntPtr pixels, uint width, uint height, uint pitch)
         {
             var videoBuffer = Buffers.VideoBuffer;
-            var index = 0;
+            var index = (int) ((Buffers.VideoUnitSize - height) / 2f) * Buffers.VideoLineBytes;
             var yPtr = pixels;
             for (var y = 0; y < height; y++)
             {
@@ -248,6 +249,7 @@ namespace UnitySnes
                     videoBuffer[index++] = (byte) (((packed >> 11) & 0x001F) * 8.2258f);
                     videoBuffer[index++] = (byte) (((packed >> 5) & 0x003F) * 4.04762f);
                     videoBuffer[index++] = (byte) ((packed & 0x001F) * 8.2258f);
+                    videoBuffer[index++] = 0xFF;
                     xPtr = new IntPtr(xPtr.ToInt64() + 2);
                 }
                 yPtr = new IntPtr(yPtr.ToInt64() + pitch);
@@ -377,13 +379,13 @@ namespace UnitySnes
                 switch (pixelFormat)
                 {
                     case PixelFormat.RetroPixelFormat0Rgb1555:
-                        _onVideoRefresh = Argb1555ToRgb24;
+                        _onVideoRefresh = Argb1555ToRgb32;
                         break;
                     case PixelFormat.RetroPixelFormatXrgb8888:
-                        _onVideoRefresh = Argb32ToRgb24;
+                        _onVideoRefresh = Argb32ToRgb32;
                         break;
                     case PixelFormat.RetroPixelFormatRgb565:
-                        _onVideoRefresh = Rgb565ToRgb24;
+                        _onVideoRefresh = Rgb565ToRgb32;
                         break;
                     default:
                         _onVideoRefresh = RetroVideoRefreshUnknown;
