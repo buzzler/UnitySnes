@@ -8,9 +8,9 @@ namespace UnitySnes
     {
         public Renderer Display;
         public AudioSource AudioSource;
-        public Texture2D Texture;
         
         private Backend _backend;
+        private Texture2D _texture;
         private const string RomFilename = "game.bytes";
         private const string SramFilename = "game.srm";
         private const string RtcFilename = "game.rtc";
@@ -45,8 +45,8 @@ namespace UnitySnes
         {
             var buffer = Backend.Buffers;
             if (!buffer.VideoUpdated) return;
-            Texture.LoadRawTextureData(buffer.VideoBuffer);
-            Texture.Apply();
+            _texture.LoadRawTextureData(buffer.VideoBuffer);
+            _texture.Apply();
             buffer.VideoUpdated = false;
         }
         
@@ -161,14 +161,14 @@ namespace UnitySnes
             if (File.Exists(rtcfilepath))
                 _backend.LoadRtc(rtcfilepath);
 
-            Texture = new Texture2D(buffers.VideoUnitSize, buffers.VideoUnitSize,
+            _texture = new Texture2D(buffers.VideoUnitSize, buffers.VideoUnitSize,
                 buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGBA32,
                 false)
             {
                 filterMode = FilterMode.Point
             };
             
-            Display.material.mainTexture = Texture;
+            Display.material.mainTexture = _texture;
             AudioSource.clip = AudioClip.Create(name, buffers.AudioBufferSize / 2, 2, 44100, true, OnAudioRead);
             AudioSource.playOnAwake = false;
             AudioSource.spatialBlend = 0;
@@ -185,7 +185,7 @@ namespace UnitySnes
             AudioSource.Stop();
             AudioSource.clip = null;
             Display.material.mainTexture = null;
-            Texture = null;
+            _texture = null;
         }
 
         private void OnEnable()
