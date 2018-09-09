@@ -11,10 +11,7 @@ namespace UnitySnes
         
         private Backend _backend;
         private Texture2D _texture;
-        private const string RomFilename = "game.bytes";
-        private const string SramFilename = "game.srm";
-        private const string RtcFilename = "game.rtc";
-        
+
         private void Start()
         {
             Application.targetFrameRate = 60;
@@ -52,7 +49,7 @@ namespace UnitySnes
         
         public void OnInputDetected(string receivedKeystroke)
         {
-#if UNITY_IOS
+#if !UNITY_EDITOR
             var inputBuffer = Backend.Buffers.InputBuffer;
             switch (receivedKeystroke)
             {
@@ -131,35 +128,56 @@ namespace UnitySnes
 #endif
         }
 
+        public byte[] GetRom(string filename = "")
+        {
+            if (string.IsNullOrEmpty(filename))
+                filename = "game.bytes";
+            
+            var primary = Path.Combine(Backend.Buffers.PersistentDataPath, filename);
+            var secondary = Path.Combine(Backend.Buffers.StreamingAssets, filename);
+            var filepath = File.Exists(primary) ? primary : secondary;
+            
+#if UNITY_ANDROID && !UNITY_EDITOR
+            var www = new WWW(filepath);
+            while (!www.isDone)
+            {
+            }
+
+            return www.bytes;
+#else
+            return File.ReadAllBytes(filepath);
+#endif
+        }
+
+        private string GetSramFilepath(string filename = "")
+        {
+            if (string.IsNullOrEmpty(filename))
+                filename = "game.sram";
+            return Path.Combine(Backend.Buffers.PersistentDataPath, filename);
+        }
+
+        private string GetRtcFilepath(string filename = "")
+        {
+            if (string.IsNullOrEmpty(filename))
+                filename = "game.rtc";
+            return Path.Combine(Backend.Buffers.PersistentDataPath, filename);
+        }
+
         private void TurnOn()
         {
             if (_backend != null) return;
             var buffers = new Buffers()
             {
                 VideoSupport16Bit = UnityEngine.SystemInfo.SupportsTextureFormat(TextureFormat.RGB565),
-                SystemDirectory = Application.persistentDataPath
+                SystemDirectory = Application.persistentDataPath,
+                PersistentDataPath = Application.persistentDataPath,
+                TemporaryDataPath = Application.temporaryCachePath,
+                StreamingAssets = Application.streamingAssetsPath
             };
             _backend = new Backend(buffers);
-
-            var romfilepath = Path.Combine(Application.persistentDataPath, RomFilename);
-            if (File.Exists(romfilepath))
-            {
-                _backend.On(File.ReadAllBytes(romfilepath));
-            }
-            else
-            {
-                romfilepath = Path.Combine(Application.streamingAssetsPath, RomFilename);
-                if (File.Exists(romfilepath))
-                    _backend.On(File.ReadAllBytes(romfilepath));
-                else
-                    throw new ArgumentException();
-            }
-            var sramfilepath = Path.Combine(Application.persistentDataPath, SramFilename);
-            if (File.Exists(sramfilepath))
-                _backend.LoadSram(sramfilepath);
-            var rtcfilepath = Path.Combine(Application.persistentDataPath, RtcFilename);
-            if (File.Exists(rtcfilepath))
-                _backend.LoadRtc(rtcfilepath);
+            _backend.On(GetRom());
+            _backend.LoadSram(GetSramFilepath(buffers.GameName));
+            _backend.LoadRtc(GetRtcFilepath(buffers.GameName));
 
             _texture = new Texture2D(buffers.VideoUnitSize, buffers.VideoUnitSize,
                 buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGBA32,
@@ -207,8 +225,8 @@ namespace UnitySnes
         private void OnApplicationQuit()
         {
             if (_backend == null) return;
-            _backend.SaveSram(Path.Combine(Application.persistentDataPath, SramFilename));
-            _backend.SaveRtc(Path.Combine(Application.persistentDataPath, RtcFilename));
+            _backend.SaveSram(GetSramFilepath(Backend.Buffers.GameName));
+            _backend.SaveRtc(GetRtcFilepath(Backend.Buffers.GameName));
         }
     }
 }

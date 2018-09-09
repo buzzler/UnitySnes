@@ -64,5 +64,21 @@ namespace UnitySnes
                 Graphics.Blit(_texture2, null as RenderTexture);
             }
         }
+
+        private void OnDestroy()
+        {
+            if (_texture1 != null)
+                _texture1.DiscardContents();
+            if (_texture2 != null)
+                _texture2.DiscardContents();
+            if (_material != null)
+                _material.mainTexture = null;
+
+            Shader = null;
+            Camera = null;
+            _texture1 = null;
+            _texture2 = null;
+            _material = null;
+        }
     }
 }

@@ -96,6 +96,8 @@ namespace UnitySnes
 
         private void LoadMemory(string filepath, uint memoryType)
         {
+            if (!File.Exists(filepath))
+                return;
             var size = Bridges.retro_get_memory_size(memoryType);
             var ptr = Bridges.retro_get_memory_data(memoryType);
             if (size <= 0)
@@ -117,6 +119,8 @@ namespace UnitySnes
 
         public void LoadState(string filepath)
         {
+            if (!File.Exists(filepath))
+                return;
             using (var file = File.OpenRead(filepath))
                 file.Read(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
             var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
@@ -158,17 +162,19 @@ namespace UnitySnes
 
             GameInfo = new GameInfo
             {
-                path = (char*) Marshal.StringToHGlobalUni(Path.GetTempFileName()).ToPointer(),
+                path = (char*) Marshal.StringToHGlobalUni(Path.Combine(Buffers.TemporaryDataPath, "temp.bytes")).ToPointer(),
                 size = (uint) bytes.Length,
                 data = arrayPointer.ToPointer()
             };
 
             if (!Bridges.retro_load_game(ref GameInfo))
                 throw new ArgumentException();
+
             SystemAvInfo = new SystemAvInfo();
             Bridges.retro_get_system_av_info(ref SystemAvInfo);
             Buffers.SetSystemAvInfo(SystemAvInfo);
             Buffers.SetStateSize(Bridges.retro_serialize_size());
+            Buffers.GameName = System.Text.Encoding.ASCII.GetString(bytes, 32704, 21).Trim();
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]

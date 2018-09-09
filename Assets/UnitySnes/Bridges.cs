@@ -78,76 +78,75 @@ namespace UnitySnes
         [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_size")]
         public static extern uint retro_get_memory_size(uint type);
 #elif UNITY_ANDROID
-        private const string CoreName = "snes9x2010_libretro";
+        private const string CoreName = "snes9x";
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_api_version")]
+        [DllImport(CoreName)]
         public static extern int retro_api_version();
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_init")]
+        [DllImport(CoreName)]
         public static extern void retro_init();
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_get_system_info")]
+        [DllImport(CoreName)]
         public static extern void retro_get_system_info(ref SystemInfo info);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_get_system_av_info")]
+        [DllImport(CoreName)]
         public static extern void retro_get_system_av_info(ref SystemAvInfo info);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_load_game")]
+        [DllImport(CoreName)]
         public static extern bool retro_load_game(ref GameInfo game);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_set_video_refresh")]
+        [DllImport(CoreName)]
         public static extern void retro_set_video_refresh(RetroVideoRefreshDelegate r);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_set_audio_sample")]
+        [DllImport(CoreName)]
         public static extern void retro_set_audio_sample(RetroAudioSampleDelegate r);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint =
-"retro_set_audio_sample_batch")]
+        [DllImport(CoreName)]
         public static extern void retro_set_audio_sample_batch(RetroAudioSampleBatchDelegate r);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_set_input_poll")]
+        [DllImport(CoreName)]
         public static extern void retro_set_input_poll(RetroInputPollDelegate r);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_set_input_state")]
+        [DllImport(CoreName)]
         public static extern void retro_set_input_state(RetroInputStateDelegate r);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_set_environment")]
+        [DllImport(CoreName)]
         public static extern bool retro_set_environment(RetroEnvironmentDelegate r);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_set_environment")]
+        [DllImport(CoreName)]
         public static extern void retro_set_controller_port_device(RetroControllerPortDevideDelegate r);
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_run")]
+        [DllImport(CoreName)]
         public static extern void retro_run();
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_deinit")]
+        [DllImport(CoreName)]
         public static extern void retro_deinit();
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "retro_unload_game")]
+        [DllImport(CoreName)]
         public static extern void retro_unload_game();
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_reset")]
+        [DllImport(CoreName)]
         public static extern void retro_reset();
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_serialize_size")]
+        [DllImport(CoreName)]
         public static extern uint retro_serialize_size();
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_serialize")]
+        [DllImport(CoreName)]
         public static extern bool retro_serialize(IntPtr data, uint size);
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_unserialize")]
+        [DllImport(CoreName)]
         public static extern bool retro_unserialize(IntPtr data, uint size);
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_reset")]
+        [DllImport(CoreName)]
         public static extern void retro_cheat_reset();
             
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_cheat_set")]
+        [DllImport(CoreName)]
         public static extern void retro_cheat_set(uint index, bool enabled, IntPtr code);
         
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_data")]
+        [DllImport(CoreName)]
         public static extern IntPtr retro_get_memory_data(uint type);
 
-        [DllImport(CoreName, CallingConvention = CallingConvention.StdCall, EntryPoint = "retro_get_memory_size")]
+        [DllImport(CoreName)]
         public static extern uint retro_get_memory_size(uint type);
 #elif UNITY_IOS
         [DllImport ("__Internal")]
@@ -240,10 +239,11 @@ namespace UnitySnes
             
         //typedef void retro_controller_port_device(unsigned port, unsigned device);
         public delegate void RetroControllerPortDevideDelegate(uint port, uint device);
-            
+
+#if UNITY_IOS && !UNITY_EDITOR
         [DllImport("__Internal")]
         private static extern void _setupExternalInput();
-            
+#endif            
         public static void SetupExternalInput()
         {
 #if UNITY_IOS && !UNITY_EDITOR

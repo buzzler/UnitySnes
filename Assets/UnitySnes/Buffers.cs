@@ -26,7 +26,12 @@ namespace UnitySnes
         public string SystemDirectory;
         public string SystemMessage;
         public uint SystemMessageFrames;
-            
+
+        public string GameName;
+        public string PersistentDataPath;
+        public string TemporaryDataPath;
+        public string StreamingAssets;
+        
         public Buffers()
         {
             AudioBufferFlush = null;
@@ -46,6 +51,7 @@ namespace UnitySnes
             SystemDirectory = "";
             SystemMessage = "";
             SystemMessageFrames = 0;
+            GameName = "";
 
         }
 
