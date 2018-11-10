@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using AOT;
+using UnityEngine;
 
 namespace UnitySnes
 {
@@ -29,6 +30,12 @@ namespace UnitySnes
         {
             Init();
             LoadGame(rom);
+        }
+                
+        public void Off()
+        {
+            Bridges.retro_unload_game();
+            Bridges.retro_deinit();
         }
 
         public void Loop()
@@ -81,6 +88,24 @@ namespace UnitySnes
             LoadMemory(filepath, MemoryType.VideoRam);
         }
 
+        public void SaveState(string filepath)
+        {
+            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
+            Bridges.retro_serialize(ptr, Buffers.StateBufferSize);
+            using (var file = File.OpenWrite(filepath))
+                file.Write(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
+        }
+
+        public void LoadState(string filepath)
+        {
+            if (!File.Exists(filepath))
+                return;
+            using (var file = File.OpenRead(filepath))
+                file.Read(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
+            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
+            Bridges.retro_unserialize(ptr, Buffers.StateBufferSize);
+        }
+        
         private void SaveMemory(string filepath, uint memoryType)
         {
             var size = Bridges.retro_get_memory_size(memoryType);
@@ -108,30 +133,6 @@ namespace UnitySnes
                 file.Read(bytes, 0, (int) size);
             Marshal.Copy(bytes, 0, ptr, (int) size);
         }
-
-        public void SaveState(string filepath)
-        {
-            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
-            Bridges.retro_serialize(ptr, Buffers.StateBufferSize);
-            using (var file = File.OpenWrite(filepath))
-                file.Write(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
-        }
-
-        public void LoadState(string filepath)
-        {
-            if (!File.Exists(filepath))
-                return;
-            using (var file = File.OpenRead(filepath))
-                file.Read(Buffers.StateBuffer, 0, Buffers.StateBuffer.Length);
-            var ptr = Marshal.UnsafeAddrOfPinnedArrayElement(Buffers.StateBuffer, 0);
-            Bridges.retro_unserialize(ptr, Buffers.StateBufferSize);
-        }
-        
-        public void Off()
-        {
-            Bridges.retro_unload_game();
-            Bridges.retro_deinit();
-        }
         
         private unsafe void Init()
         {
@@ -155,8 +156,11 @@ namespace UnitySnes
             Bridges.retro_init();
         }
         
-        private unsafe void LoadGame(byte[] bytes)
+        public unsafe void LoadGame(byte[] bytes)
         {
+            if (bytes == null || bytes.Length == 0)
+                return;
+
             var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
             Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
 
@@ -167,6 +171,7 @@ namespace UnitySnes
                 data = arrayPointer.ToPointer()
             };
 
+            Bridges.retro_unload_game();
             if (!Bridges.retro_load_game(ref GameInfo))
                 throw new ArgumentException();
 
@@ -174,7 +179,6 @@ namespace UnitySnes
             Bridges.retro_get_system_av_info(ref SystemAvInfo);
             Buffers.SetSystemAvInfo(SystemAvInfo);
             Buffers.SetStateSize(Bridges.retro_serialize_size());
-            Buffers.GameName = System.Text.Encoding.ASCII.GetString(bytes, 32704, 21).Trim();
         }
 
         [MonoPInvokeCallback(typeof(Bridges.RetroVideoRefreshDelegate))]

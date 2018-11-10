@@ -5,7 +5,6 @@ namespace UnitySnes
 {
     public class SimpleFilter : MonoBehaviour
     {
-        public Shader Shader;
         public Camera Camera;
         private int _passes;
         private RenderTexture _texture1;
@@ -13,9 +12,14 @@ namespace UnitySnes
         private Material _material;
         private Vector2 _internal;
 
-        private void Start()
+        public void SetActive(bool value)
         {
-            var shadername = Shader.name;
+            enabled = value;
+        }
+        
+        public void SetShader(Shader shader)
+        {
+            var shadername = shader.name;
             {
                 var match = new Regex(".+/([1-9])x.+").Match(shadername);
                 _passes = match.Success ? int.Parse(match.Groups[1].Value) : 1;
@@ -27,7 +31,7 @@ namespace UnitySnes
             if (!(_internal.y % 2).Equals(0f))
                 _internal.y--;
             
-            _material = new Material(Shader);
+            _material = new Material(shader);
             _texture1 = new RenderTexture((int)_internal.x, (int)_internal.y, 0);
             _texture1.filterMode = FilterMode.Point;
             _texture1.Create();
@@ -37,6 +41,7 @@ namespace UnitySnes
                 _texture2.filterMode = FilterMode.Point;
                 _texture2.Create();
             }
+            SetActive(true);
         }
 
         private void OnPreRender()
@@ -74,8 +79,6 @@ namespace UnitySnes
             if (_material != null)
                 _material.mainTexture = null;
 
-            Shader = null;
-            Camera = null;
             _texture1 = null;
             _texture2 = null;
             _material = null;

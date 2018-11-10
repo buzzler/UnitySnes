@@ -27,7 +27,8 @@ namespace UnitySnes
         public string SystemMessage;
         public uint SystemMessageFrames;
 
-        public string GameName;
+        public string LastKey;
+        public string LastFilePath;
         public string PersistentDataPath;
         public string TemporaryDataPath;
         public string StreamingAssets;
@@ -51,8 +52,8 @@ namespace UnitySnes
             SystemDirectory = "";
             SystemMessage = "";
             SystemMessageFrames = 0;
-            GameName = "";
-
+            LastKey = "";
+            LastFilePath = "";
         }
 
         public void SetSystemAvInfo(SystemAvInfo info)
