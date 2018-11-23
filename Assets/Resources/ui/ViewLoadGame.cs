@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
-using System.Net.NetworkInformation;
-using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
-using Ping = System.Net.NetworkInformation.Ping;
 
 namespace UnitySnes
 {
     public class ViewLoadGame : Views
     {
+        public GameObject ProgressBar;
+        public RectTransform In;
         public Text Text;
-        private bool canceled;
-        private bool reachable;
+        private bool _reachable;
 
         protected override void Start()
         {
@@ -23,7 +22,6 @@ namespace UnitySnes
 
         public void OnTouchBack()
         {
-            canceled = true;
             Frontend.OnMenuOpen("ui/menus");
         }
 
@@ -32,13 +30,23 @@ namespace UnitySnes
             Text.text = message;
         }
 
+        public void SetProgress(float value)
+        {
+            value = Mathf.Clamp(value, 0f, 1f);
+            if (!ProgressBar.activeSelf && value > 0f)
+                ProgressBar.SetActive(true);
+            else if (ProgressBar.activeSelf && value > 0.999f)
+                ProgressBar.SetActive(false);
+            In.localScale = new Vector3(value, 1f, 1f);
+        }
+
         public IEnumerator _Ping(string ipaddress)
         {
             yield return StartCoroutine(_ShowText("connecting\n[SFC]", 0.5f));
-            var p = new UnityEngine.Ping(ipaddress);
+            var p = new Ping(ipaddress);
             while (!p.isDone)
                 yield return null;
-            reachable = p.time >= 0;
+            _reachable = p.time >= 0;
         }
 
         private IEnumerator _ShowText(string message, float time)
@@ -49,10 +57,12 @@ namespace UnitySnes
         
         private IEnumerator _Load()
         {
-            yield return StartCoroutine(_Ping("192.168.10.1"));
-            if (reachable)
+            const string host = "192.168.10.1";
+            const int port = 80;
+            yield return StartCoroutine(_Ping(host));
+            if (_reachable)
             {
-                yield return StartCoroutine(_LoadLocal("http://192.168.10.1:8081/"));
+                yield return StartCoroutine(_LoadList($"http://{host}:{port}/"));
             }
             else
             {
@@ -61,47 +71,62 @@ namespace UnitySnes
             }
         }
 
-        private IEnumerator _LoadLocal(string url)
+        private IEnumerator _LoadList(string url)
         {
+            var files = new List<Uri>();
+            
+            SetText("thinking");
             using (var www = new WWW(url))
             {
                 while (!www.isDone)
-                {
-                    SetText($"downloading\n[{www.progress:P}]");
                     yield return null;
-                }
-                
-                var headers = www.responseHeaders;
-                var filename = headers["Filename"];
-                var contenttype = headers["Content-Type"];
-                var status = headers["STATUS"];
 
-                if (string.IsNullOrEmpty(www.error) && 
-                    !string.IsNullOrEmpty(filename) &&
-                    contenttype == "application/octet-stream" && 
-                    status.Contains("200"))
+                var retrode = JsonUtility.FromJson<Retrode>(www.text);
+                foreach (var file in retrode.files)
+                    files.Add(new Uri($"{retrode.url}{file}"));
+            }
+
+            if (files.Count == 0)
+            {
+                yield return StartCoroutine(_ShowText("empty rom\ncheck your cartridge slot", 2f));
+                OnTouchBack();
+            }
+            else
+            {
+                var rom = string.Empty;
+                for (var index = 0; index < files.Count; index++)
                 {
-                    // clear
-                    var caches = Directory.GetFiles(Application.persistentDataPath, "*.sfc");
-                    foreach (var cach in caches)
-                        File.Delete(cach);
-                    
-                    // new cach
-                    var bytes = www.bytes;
+                    var file = files[index];
+                    var www = new WWW(file.AbsoluteUri);
+                    while (!www.isDone)
+                    {
+                        SetText($"download ({index+1}/{files.Count})\n[{www.progress:P}]");
+                        SetProgress(www.progress);
+                        yield return null;
+                    }
+
+                    var fileext = Path.GetExtension(file.AbsolutePath);
+                    var filename = Path.GetFileName(file.AbsolutePath);
                     var filepath = Path.Combine(Application.persistentDataPath, filename);
-                    File.WriteAllBytes(filepath, bytes);
                     
-                    // load
-                    SetText($"loading");
-                    yield return new WaitForSeconds(1f);
-                    Frontend.ChangeGame(filename);
-                    Frontend.OnMenuOpen("");
+                    Debug.Log(filepath);
+                    File.WriteAllBytes(filepath, www.bytes);
+                    
+                    if (string.IsNullOrEmpty(rom) && fileext == ".sfc")
+                        rom = filename;
+                }
+
+                if (string.IsNullOrEmpty(rom))
+                {
+                    yield return StartCoroutine(_ShowText("empty rom\ncheck your cartridge slot", 2f));
+                    OnTouchBack();
                 }
                 else
                 {
-                    yield return StartCoroutine(_ShowText(www.text, 2f));
-                    yield return new WaitForSeconds(2f);
-                    OnTouchBack();
+                    SetText($"loading");
+                    yield return new WaitForSeconds(1f);
+                    Frontend.ChangeGame(rom);
+                    Frontend.OnMenuOpen("");
                 }
             }
         }

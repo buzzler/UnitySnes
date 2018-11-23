@@ -9,7 +9,7 @@ PlayerSettings:
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
   defaultScreenOrientation: 4
-  targetDevice: 0
+  targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 0
   companyName: netmarble
@@ -827,7 +827,7 @@ PlayerSettings:
     17: MOBILE_INPUT
     20: MOBILE_INPUT
   platformArchitecture:
-    iOS: 1
+    iOS: 2
   scriptingBackend:
     Android: 1
     Standalone: 0

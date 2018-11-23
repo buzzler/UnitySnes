@@ -106,4 +106,10 @@ namespace UnitySnes
         public const uint SystemRam = 2;
         public const uint VideoRam = 3;
     }
+    
+    class Retrode
+    {
+        public string url;
+        public string[] files;
+    }
 }
