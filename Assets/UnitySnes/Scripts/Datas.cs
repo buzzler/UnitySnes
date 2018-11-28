@@ -112,4 +112,15 @@ namespace UnitySnes
         public string url;
         public string[] files;
     }
+
+    public class RomHeader
+    {
+        public string GameTitle;
+        public byte RomType;
+        public int RomSize;
+        public int SaveRamSize;
+        public byte CountryCode;
+        public byte License;
+        public byte Version;
+    }
 }

@@ -18,10 +18,6 @@ namespace UnitySnes
         private void Start()
         {
             Application.targetFrameRate = 60;
-            
-            #if UNITY_EDITOR
-            OnMenuOpen("ui/menus");
-            #endif
         }
 
         private void Update()
@@ -90,6 +86,9 @@ namespace UnitySnes
             inputBuffer[SnesInput.R2] = (short) (Input.GetKey(KeyCode.R) ? 1 : 0);
             inputBuffer[SnesInput.L3] = (short) (Input.GetKey(KeyCode.T) ? 1 : 0);
             inputBuffer[SnesInput.R3] = (short) (Input.GetKey(KeyCode.Y) ? 1 : 0);
+            
+            if (Input.GetMouseButton(2))
+                OnMenuOpen("ui/menus");
 #endif
             if (Input.touchCount == 2)
                 OnMenuOpen("ui/menus");
@@ -104,7 +103,7 @@ namespace UnitySnes
             var secondary = Path.Combine(Backend.Buffers.StreamingAssets, filename);
             var filepath = File.Exists(primary) ? primary : secondary;
             Backend.Buffers.LastFilePath = filepath;
-            
+
 #if UNITY_ANDROID && !UNITY_EDITOR
             var www = new WWW(filepath);
             while (!www.isDone)
@@ -178,9 +177,11 @@ namespace UnitySnes
                 StreamingAssets = Application.streamingAssetsPath
             };
             _backend = new Backend(buffers);
-            _backend.On(GetRom(filename));
+            _backend.Init();
+            _backend.LoadGame(GetRom(filename));
             _backend.LoadSram(GetSramFilePaths());
             _backend.LoadRtc(GetRtcFilePaths());
+            Debug.Log($"load game: {Backend.RomHeader.GameTitle}");
 
             _texture = new Texture2D(buffers.VideoUnitSize, buffers.VideoUnitSize,
                 buffers.VideoSupport16Bit ? TextureFormat.RGB565 : TextureFormat.RGBA32,
@@ -202,7 +203,7 @@ namespace UnitySnes
         public void TurnOff()
         {
             if (_backend == null) return;
-            _backend.Off();
+            _backend.DeInit();
 
             AudioSource.Stop();
             AudioSource.clip = null;
@@ -213,6 +214,7 @@ namespace UnitySnes
         public void ChangeGame(string filename = "")
         {
             _backend?.LoadGame(GetRom(filename));
+            Debug.Log($"load game: {Backend.RomHeader.GameTitle}");
         }
 
         private void OnEnable()

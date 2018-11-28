@@ -11,6 +11,7 @@ namespace UnitySnes
         public static SystemInfo SystemInfo; // set by Init
         public static GameInfo GameInfo; // set by LoadGame
         public static SystemAvInfo SystemAvInfo; // set by LoadGame
+        public static RomHeader RomHeader; // set by LoadGame
         public static Buffers Buffers; // set by LoadGame
         private static Action<IntPtr, uint, uint, uint> _onVideoRefresh;
         private Bridges.RetroEnvironmentDelegate _environment;
@@ -24,18 +25,6 @@ namespace UnitySnes
         public Backend(Buffers buffers)
         {
             Buffers = buffers;
-        }
-        
-        public void On(byte[] rom)
-        {
-            Init();
-            LoadGame(rom);
-        }
-                
-        public void Off()
-        {
-            Bridges.retro_unload_game();
-            Bridges.retro_deinit();
         }
 
         public void Loop()
@@ -134,7 +123,7 @@ namespace UnitySnes
             Marshal.Copy(bytes, 0, ptr, (int) size);
         }
         
-        private unsafe void Init()
+        public unsafe void Init()
         {
             _environment = RetroEnvironment;
             _videoRefresh = RetroVideoRefresh;
@@ -155,12 +144,31 @@ namespace UnitySnes
             Bridges.retro_set_controller_port_device(_controllerPortDevide);
             Bridges.retro_init();
         }
+
+        public void DeInit()
+        {
+            Bridges.retro_unload_game();
+            Bridges.retro_deinit();
+        }
         
         public unsafe void LoadGame(byte[] bytes)
         {
             if (bytes == null || bytes.Length == 0)
                 return;
 
+            var offset = (0x400 << bytes[0x7FD7] == bytes.Length) ? 0x7000 : 0xF000;
+            RomHeader = new RomHeader
+            {
+                GameTitle = System.Text.Encoding.GetEncoding("iso-2022-jp").GetString(bytes, offset | 0xFC0, 21).Trim(),
+                RomType = bytes[offset | 0xFD6],
+                RomSize = 0x400 << bytes[offset | 0xFD7],
+                SaveRamSize = 0x400 << bytes[offset | 0xFD8],
+                CountryCode = bytes[offset | 0xFD9],
+                License = bytes[offset | 0xFDA],
+                Version = bytes[offset | 0xFDB]
+            };
+            
+            
             var arrayPointer = Marshal.AllocHGlobal(bytes.Length * Marshal.SizeOf(typeof(byte)));
             Marshal.Copy(bytes, 0, arrayPointer, bytes.Length);
 
