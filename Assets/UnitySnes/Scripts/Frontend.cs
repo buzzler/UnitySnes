@@ -87,7 +87,7 @@ namespace UnitySnes
             inputBuffer[SnesInput.L3] = (short) (Input.GetKey(KeyCode.T) ? 1 : 0);
             inputBuffer[SnesInput.R3] = (short) (Input.GetKey(KeyCode.Y) ? 1 : 0);
             
-            if (Input.GetMouseButton(2))
+            if (Input.GetMouseButton(1))
                 OnMenuOpen("ui/menus");
 #endif
             if (Input.touchCount == 2)
