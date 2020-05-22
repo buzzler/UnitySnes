@@ -57,7 +57,7 @@ namespace UnitySnes
         
         private IEnumerator _Load()
         {
-            const string host = "192.168.10.1";
+            const string host = "192.168.0.1";
             const int port = 80;
             yield return StartCoroutine(_Ping(host));
             if (_reachable)
@@ -80,7 +80,7 @@ namespace UnitySnes
             {
                 while (!www.isDone)
                     yield return null;
-
+                
                 var retrode = JsonUtility.FromJson<Retrode>(www.text);
                 foreach (var file in retrode.files)
                     files.Add(new Uri($"{retrode.url}{file}"));
@@ -112,7 +112,7 @@ namespace UnitySnes
                     Debug.Log(filepath);
                     File.WriteAllBytes(filepath, www.bytes);
                     
-                    if (string.IsNullOrEmpty(rom) && fileext == ".sfc")
+                    if (string.IsNullOrEmpty(rom) && (fileext == ".sfc" || fileext == ".smc"))
                         rom = filename;
                 }
 
