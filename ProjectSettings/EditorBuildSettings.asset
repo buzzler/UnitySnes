@@ -8,4 +8,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Main.unity
     guid: 2237cdf8f9d8aba4eab6893363b5d040
+  - enabled: 1
+    path: Assets/Controller Tester/Scenes/controllerTest.unity
+    guid: f4b5988cbcf23d04a83de3a482f540d8
   m_configObjects: {}

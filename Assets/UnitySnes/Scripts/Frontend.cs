@@ -89,6 +89,20 @@ namespace UnitySnes
             
             if (Input.GetMouseButton(1))
                 OnMenuOpen("ui/menus");
+#else
+            var inputBuffer = Backend.Buffers.InputBuffer;
+            inputBuffer[SnesInput.Right] = (short) (Input.GetAxis("Axis 1") > 0f ? 1 : 0);
+            inputBuffer[SnesInput.Left] = (short) (Input.GetAxis("Axis 1") < 0f ? 1 : 0);
+            inputBuffer[SnesInput.Down] = (short) (Input.GetAxis("Axis 2") > 0f ? 1 : 0);
+            inputBuffer[SnesInput.Up] = (short) (Input.GetAxis("Axis 2") < 0f ? 1 : 0);
+            inputBuffer[SnesInput.Select] = (short) (Input.GetKey(KeyCode.JoystickButton0) ? 1 : 0);
+            inputBuffer[SnesInput.Start] = (short) (Input.GetKey(KeyCode.JoystickButton16) ? 1 : 0);
+            inputBuffer[SnesInput.L] = (short) (Input.GetKey(KeyCode.JoystickButton8) ? 1 : 0);
+            inputBuffer[SnesInput.R] = (short) (Input.GetKey(KeyCode.JoystickButton9) ? 1 : 0);
+            inputBuffer[SnesInput.A] = (short) (Input.GetKey(KeyCode.JoystickButton13) ? 1 : 0);
+            inputBuffer[SnesInput.B] = (short) (Input.GetKey(KeyCode.JoystickButton14) ? 1 : 0);
+            inputBuffer[SnesInput.X] = (short) (Input.GetKey(KeyCode.JoystickButton12) ? 1 : 0);
+            inputBuffer[SnesInput.Y] = (short) (Input.GetKey(KeyCode.JoystickButton15) ? 1 : 0);
 #endif
             if (Input.touchCount == 2)
                 OnMenuOpen("ui/menus");
